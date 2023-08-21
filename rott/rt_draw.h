@@ -40,6 +40,9 @@ int viewx;
 int shapenum;
 int altshapenum;
 int shapesize;
+#ifdef RT_OPENGL
+fixed x,y,z;				//3d coordinates
+#endif
 int x1,x2,h1,h2;
 int texturestart;
 int textureend;

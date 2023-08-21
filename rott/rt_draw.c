@@ -22,6 +22,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "profile.h"
 #include "rt_def.h"
 #include <string.h>
+#ifdef RT_OPENGL
+#include <GL/glu.h>
+#endif
 
 #include "watcom.h"
 #include "sprites.h"
@@ -132,6 +135,11 @@ int drawtime=0;
 visobj_t vislist[MAXVISIBLE],*visptr,*visstep,*farthest;
 
 int firstcoloffset=0;
+
+#ifdef RT_OPENGL
+#include "opengl/rt_gl.h"
+#endif
+#include <assert.h>
 
 /*
 ==================
@@ -813,7 +821,12 @@ void DrawScaleds (void)
 	  if (spotvis[tmwall->tilex][tmwall->tiley])
 		  {
 		  mapseen[tmwall->tilex][tmwall->tiley]=1;
-		  if (tmwall->vertical)
+		  if (tmwall->vertical) {
+#ifdef RT_OPENGL
+			visptr->x = tmwall->tilex*65536;
+			visptr->y = tmwall->tiley*65536;
+			visptr->z = 0;
+#endif
 			  {
 			  gx=(tmwall->tilex<<16)+0x8000;
 			  gy=(tmwall->tiley<<16);
@@ -828,8 +841,13 @@ void DrawScaleds (void)
 			  visptr->viewx=tmwall->toptexture;
 			  visptr->shapesize=2;
 			  }
-		  else
-			  {
+		  }
+		  else {
+#ifdef RT_OPENGL
+			visptr->x = tmwall->tilex*65536;
+			visptr->y = tmwall->tiley*65536;
+			visptr->z = 1;
+#endif
 			  gx=(tmwall->tilex<<16);
 			  gy=(tmwall->tiley<<16)+0x8000;
 			  visptr->texturestart=0;
@@ -889,7 +907,11 @@ void DrawScaleds (void)
 
 			 result = TransformObject (statptr->x,statptr->y,&(visptr->viewx),&(visptr->viewheight));
 
+#ifndef RT_OPENGL
 			 if ((result==false) || (visptr->viewheight< (1<<(HEIGHTFRACTION+2))))
+#else
+			 if (result==false)
+#endif
 				 continue;                         // to close to the object
 			 statptr->flags |= FL_SEEN;
 
@@ -905,7 +927,11 @@ void DrawScaleds (void)
 					 visptr->h2=transparentlevel;
 				 else
 					 visptr->h2=FIXEDTRANSLEVEL;
+#ifdef RT_OPENGL
+				if (statptr->flags&FL_FULLLIGHT) visptr->shapesize=7;
+#else
              SetSpriteLightLevel(statptr->x,statptr->y,visptr,0,(statptr->flags&FL_FULLLIGHT));
+#endif
 				 }
 			 else if (statptr->flags&FL_SOLIDCOLOR)
 				 {
@@ -915,14 +941,23 @@ void DrawScaleds (void)
 			 else if (statptr->flags&FL_COLORED)
 				 {
 				 visptr->shapesize=0;
+#ifdef RT_OPENGL
+                        //WORKAROUND
+                        visptr->shapenum = -1 * visptr->shapenum * 12 - statptr->hitpoints;
+#else
 					 SetColorLightLevel(statptr->x,statptr->y,visptr,
                                    0,statptr->hitpoints,
                                    (statptr->flags&FL_FULLLIGHT));
+#endif
 				 }
           else
 				 {
 				 visptr->shapesize=0;
+#ifdef RT_OPENGL
+				if (statptr->flags&FL_FULLLIGHT) visptr->shapesize=6;
+#else
              SetSpriteLightLevel(statptr->x,statptr->y,visptr,0,(statptr->flags&FL_FULLLIGHT));
+#endif
 				 }
 
 			 visptr->h1=pheight-statptr->z;
@@ -957,7 +992,11 @@ void DrawScaleds (void)
 					 visptr->shapenum++;
 					 }
 				 }
-
+#ifdef RT_OPENGL
+			visptr->x = statptr->x;
+			visptr->y = statptr->y;
+			visptr->z = statptr->z;
+#endif
 			 if (visptr < &vislist[MAXVISIBLE-1]) // don't let it overflo'
 				visptr++;
 
@@ -997,7 +1036,11 @@ void DrawScaleds (void)
 
 //        result = TransformObject (obj->drawx, obj->drawy,&(visptr->viewx),&(visptr->viewheight));
         result = TransformObject (obj->x, obj->y,&(visptr->viewx),&(visptr->viewheight));
-        if ((result==false) || (visptr->viewheight< (1<<(HEIGHTFRACTION+2))))
+#ifndef RT_OPENGL
+if ((result==false) || (visptr->viewheight< (1<<(HEIGHTFRACTION+2))))
+#else
+if (result==false)
+#endif
 			  continue;                         // to close to the object
 		  if (obj->state->rotate)
 			  visptr->shapenum += CalcRotate (obj);
@@ -1021,12 +1064,21 @@ void DrawScaleds (void)
 				  playertype *pstate;
 
 				  M_LINKSTATE(obj,pstate);
+#ifdef RT_OPENGL
+                        //WORKAROUND
+                        visptr->shapenum = -1 * visptr->shapenum * 12 - pstate->uniformcolor;
+#else
 					  SetColorLightLevel(obj->x,obj->y,visptr,
                                     obj->dir,pstate->uniformcolor,
                                     (obj->flags&FL_FULLLIGHT) );
+#endif
 				  }
 			  else
+#ifdef RT_OPENGL
+                      if (obj->flags&FL_FULLLIGHT) visptr->shapesize=6;
+#else
               SetSpriteLightLevel(obj->x,obj->y,visptr,obj->dir,(obj->flags&FL_FULLLIGHT));
+#endif
 
 			  }
 		  else
@@ -1034,11 +1086,19 @@ void DrawScaleds (void)
 			  if ((obj->obclass >= b_darianobj) && (obj->obclass <= b_robobossobj) &&
 				  MISCVARS->redindex)
               {
+#ifdef RT_OPENGL
+                          visptr->shapesize=5;
+#else
 				  visptr->colormap=redmap+((MISCVARS->redindex-1)<<8);
+#endif
               }
            else
               {
+#ifdef RT_OPENGL
+		      if (obj->flags&FL_FULLLIGHT) visptr->shapesize=6;
+#else
               SetSpriteLightLevel(obj->x,obj->y,visptr,obj->dir,(obj->flags&FL_FULLLIGHT));
+#endif
               }
            }
 
@@ -1071,7 +1131,11 @@ void DrawScaleds (void)
            {
            visptr->shapenum++;
            }
-
+#ifdef RT_OPENGL
+        visptr->x = obj->x;
+        visptr->y = obj->y;
+        visptr->z = obj->z;
+#endif
 		  if (visptr < &vislist[MAXVISIBLE-1]) // don't let it overflo'
 			  visptr++;
 		  obj->flags |= FL_SEEN;
@@ -1093,30 +1157,103 @@ void DrawScaleds (void)
       //
       // draw farthest
       //
+#ifdef RT_OPENGL
+if (lightsource) {
+	rtglEnable(GL_LIGHT1);
+	_update_near_lights(lights, sortedvislist[i]->x / 65536, sortedvislist[i]->y / 65536);
+}
+#endif
 
-      if (sortedvislist[i]->shapesize==4) {
-      
-        ScaleSolidShape(sortedvislist[i]);
-        
-      } else if (sortedvislist[i]->shapesize==3) {
+switch (sortedvislist[i]->shapesize) {
+#ifdef RT_OPENGL
+	case 6: //fullbright
+		if (!fog) {
+			rtglDisable(GL_LIGHTING);
+			VGL_Bind_Texture ( sortedvislist[i]->shapenum, RTGL_TEXTURE_PATCH | RTGL_GENERATE_MIPMAPS | RTGL_FILTER_RGBA | 128);
+			VGL_DrawShapeFan ( sortedvislist[i]->x, sortedvislist[i]->y, sortedvislist[i]->z);
+			rtglEnable(GL_LIGHTING);
+			break;
+		}
+	case 0:	//patch_t
+		VGL_Bind_Texture ( sortedvislist[i]->shapenum, RTGL_TEXTURE_PATCH | RTGL_GENERATE_MIPMAPS | RTGL_FILTER_RGBA | 128);
+		VGL_DrawShapeFan ( sortedvislist[i]->x, sortedvislist[i]->y, sortedvislist[i]->z);
+		break;
+	case 5:	//redindex
+		assert(MISCVARS->redindex-1 >= 0 && MISCVARS->redindex-1 <= 16);
 
-         InterpolateDoor (sortedvislist[i]);
+		rtglDisable(GL_LIGHTING);
+		rtglColor3f(	1.0f,
+				1.0f - (float) (MISCVARS->redindex-1) / 16.0f,
+				1.0f - (float) (MISCVARS->redindex-1) / 16.0f );
 
-      } else if (sortedvislist[i]->shapesize==2) {
+		VGL_Bind_Texture ( sortedvislist[i]->shapenum, RTGL_TEXTURE_PATCH | RTGL_GENERATE_MIPMAPS | RTGL_FILTER_RGBA | 128);
+		VGL_DrawShapeFan ( sortedvislist[i]->x, sortedvislist[i]->y, sortedvislist[i]->z);
+		rtglColor3f(1.0f,1.0f,1.0f);
+		rtglEnable(GL_LIGHTING);
+		break;
+	case 4: //solid color
+		rtglDisable(GL_LIGHTING);
+		rtglColor3f(	(float) rtgl_palette[ sortedvislist[i]->h2 ].r / 255.0f,
+				(float) rtgl_palette[ sortedvislist[i]->h2 ].g / 255.0f,
+				(float) rtgl_palette[ sortedvislist[i]->h2 ].b / 255.0f );
+		VGL_Bind_Texture ( sortedvislist[i]->shapenum, RTGL_TEXTURE_PATCH | RTGL_GENERATE_MIPMAPS | RTGL_FILTER_RGBA | 128);
+		VGL_DrawShapeFan ( sortedvislist[i]->x, sortedvislist[i]->y, sortedvislist[i]->z);
+		rtglColor3f(1.0f,1.0f,1.0f);
+		rtglEnable(GL_LIGHTING);
+		break;
+	case 7: //transparent shape transpatch_t fullbright
+		if (!fog) {
+			VGL_Bind_Texture ( sortedvislist[i]->shapenum, RTGL_TEXTURE_TRANSPATCH | RTGL_GENERATE_MIPMAPS | RTGL_FILTER_RGBA | 128);
+			VGL_DrawShapeFan ( sortedvislist[i]->x, sortedvislist[i]->y, sortedvislist[i]->z);
+			break;
+		}
+	case 1: //transparent shape transpatch_t
+		/* fading? */
+		rtglDisable(GL_LIGHTING);
+		assert (sortedvislist[i]->h2 <= 64);
+		assert (sortedvislist[i]->h2 >= 0);
+		rtglColor4f(1, 1, 1, ((float) sortedvislist[i]->h2) / 64.0f);
 
-         InterpolateMaskedWall (sortedvislist[i]);
+		VGL_Bind_Texture ( sortedvislist[i]->shapenum, RTGL_TEXTURE_TRANSPATCH | RTGL_GENERATE_MIPMAPS | RTGL_FILTER_RGBA | 128);
+		VGL_DrawShapeFan ( sortedvislist[i]->x, sortedvislist[i]->y, sortedvislist[i]->z);
 
-      } else if (sortedvislist[i]->shapesize==1) {
-
-         ScaleTransparentShape(sortedvislist[i]);
-
-      } else {
-
-         ScaleShape(sortedvislist[i]);
-
-      }
-
-      }
+		rtglColor4f(1, 1, 1, 1);
+		rtglEnable(GL_LIGHTING);
+		break;
+	case 2: //Masked Wall
+		rtglDisable(GL_CULL_FACE);
+		if (sortedvislist[i]->z == 0) {
+			rtglNormal3f(-1,0,0);
+			VGL_DrawMaskedWall_Vertical(sortedvislist[i]->x, sortedvislist[i]->y, sortedvislist[i]->shapenum, sortedvislist[i]->altshapenum, sortedvislist[i]->viewx);
+		}
+		else {
+			rtglNormal3f(0,0,1);
+			VGL_DrawMaskedWall_Horizontal(sortedvislist[i]->x, sortedvislist[i]->y, sortedvislist[i]->shapenum, sortedvislist[i]->altshapenum, sortedvislist[i]->viewx);
+		}
+		rtglEnable(GL_CULL_FACE);
+		break;
+	case 3:	//should never happen
+		printf("Spritetype not supported\n"); break;
+	default:
+		perror("Strange Spritetype in Static Objects!");
+#else
+	case 4:
+		ScaleSolidShape(sortedvislist[i]); break;
+	case 3:
+		InterpolateDoor (sortedvislist[i]); break;
+	case 2:
+		InterpolateMaskedWall (sortedvislist[i]); break;
+	case 1:
+		ScaleTransparentShape(sortedvislist[i]); break;
+	default:
+		ScaleShape(sortedvislist[i]); break;
+#endif
+}
+}
+#ifdef RT_OPENGL
+if (lightsource)
+	rtglDisable(GL_LIGHT1);
+#endif
 }
 
 //==========================================================================
@@ -1414,7 +1551,7 @@ void CalcTics (void)
 =
 ==========================
 */
-
+#ifndef RT_OPENGL
 void SetSpriteLightLevel (int x, int y, visobj_t * sprite, int dir, int fullbright)
 {
    int i;
@@ -1463,6 +1600,7 @@ void SetSpriteLightLevel (int x, int y, visobj_t * sprite, int dir, int fullbrig
          }
       }
 }
+#endif
 
 /*
 ==========================
@@ -1618,6 +1756,9 @@ void SetWallLightLevel (wallcast_t * post)
 
 void DrawWallPost ( wallcast_t * post, byte * buf)
 {
+#ifdef RT_OPENGL
+STUB_FUNCTION; return;
+#endif
    int ht;
    int topscreen;
    int bottomscreen;
@@ -1732,6 +1873,9 @@ bottomcheck:
 
 void   DrawWalls (void)
 {
+#ifdef RT_OPENGL
+VGL_DrawSpotVis(spotvis, tilemap, mapplanes[2], &lightsource, lights);
+#else
    byte * buf;
    int plane;
    wallcast_t * post;
@@ -1767,6 +1911,7 @@ void   DrawWalls (void)
             }
          }
       }
+#endif
 }
 
 
@@ -1791,6 +1936,9 @@ void TransformDoors( void )
 //
 // place door objects
 //
+#ifdef RT_OPENGL
+   rtglDisable(GL_CULL_FACE);
+#endif
 
   for (i = 0;i<doornum;i++)
 	  {
@@ -1803,10 +1951,15 @@ void TransformDoors( void )
            {
            gx=(doorobjlist[i]->tilex<<16)+0x8000;
            gy=(doorobjlist[i]->tiley<<16);
+#ifndef RT_OPENGL
            if (viewx<gx)
               result=TransformPlane(gx,gy,gx,gy+0xffff,doorptr);
            else
               result=TransformPlane(gx,gy+0xffff,gx,gy,doorptr);
+#else
+	rtglNormal3f(-1,0,0);
+	VGL_DrawDoor_Vertical(doorobjlist[i]->tilex*65536, doorobjlist[i]->tiley*65536, doorobjlist[i]->texture, doorobjlist[i]->alttexture, doorobjlist[i]->basetexture);
+#endif
            }
         else
            {
@@ -1817,6 +1970,7 @@ void TransformDoors( void )
            else
               result=TransformPlane(gx,gy,gx+0xffff,gy,doorptr);
            }
+#ifndef RT_OPENGL
         if (result==true)
            {
            doorptr->viewx=0;
@@ -1836,8 +1990,13 @@ void TransformDoors( void )
                  visptr++;
               }
            }
+#endif
 		  }
      }
+#ifdef RT_OPENGL
+     rtglEnable(GL_CULL_FACE);
+     return;
+#else
 //
 // draw from back to front
 //
@@ -1852,6 +2011,7 @@ void TransformDoors( void )
       //
       InterpolateWall (sortedvislist[i]);
       }
+#endif
 }
 
 
@@ -1891,6 +2051,9 @@ void TransformPushWalls( void )
         gx=pwallobjlist[i]->x;
         gy=pwallobjlist[i]->y;
         mapseen[gx>>16][gy>>16]=1;
+#ifdef RT_OPENGL
+	VGL_DrawPushWall( pwallobjlist[i]->x, pwallobjlist[i]->y, pwallobjlist[i]->texture);
+#else
         if (viewx<gx)
            {
            if (viewy<gy)
@@ -1966,9 +2129,13 @@ void TransformPushWalls( void )
         visptr->shapesize=((pwallobjlist[i]->x>>16)<<7)+(pwallobjlist[i]->y>>16);
         if ((visptr < &vislist[MAXVISIBLE-1]) && (result==true)) // don't let it overflo'
            visptr++;
+#endif
         }
      }
 
+#ifdef RT_OPENGL
+return;
+#endif
 
 //
 // draw from back to front
@@ -2067,8 +2234,10 @@ void WallRefresh (void)
 	else
       pheight += (sintable[yzangle&2047] >> 14);
 
+#ifndef RT_OPENGL
    viewx -= (FixedMul(sintable[yzangle&2047],costable[viewangle&2047])>>1);
    viewy += (FixedMul(sintable[yzangle&2047],sintable[viewangle&2047])>>1);
+#endif
 
 // Set YZ angle
 
@@ -2101,15 +2270,43 @@ void WallRefresh (void)
    viewcos = costable[viewangle];
    c_startx=(scale*viewcos)-(centerx*viewsin);
    c_starty=(-scale*viewsin)-(centerx*viewcos);
+
+#ifdef RT_OPENGL
+	rtglLoadIdentity();
+	//angle = 0 -> look in x direction
+//pheight = player->z + locplayerstate->playerheight + locplayerstate->heightoffset;
+	gluLookAt(  0, 0, 0, 1, 0, 0, 0, 1, 0);
+
+//	printf("%d, %d, %d, %d, %d\n", darknesslevel, minshade, maxshade, baseminshade, basemaxshade);
+	GLfloat light_position [4] = {0.0f, -((float) locplayerstate->playerheight / 128.0f), 0.0f, 1.0f};
+	rtglLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
+	//set camera
+	rtglRotatef( (float) -yzangle * 360.0f / 2048.0f , 0, 0, 1);
+	rtglRotatef( (float) -viewangle * 360.0f / 2048.0f , 0, 1, 0);
+
+	VGL_DrawSky(pheight);	//draw sky
+
+	rtglTranslatef( (float) -viewx / 65536.0f , (float) -levelheight + (float) pheight / 64.0f, (float) -viewy / 65536.0f);
+
+	rtglEnable(GL_LIGHTING);
+#endif
+
    Refresh ();
    UpdateClientControls();
+#ifdef RT_OPENGL
+   DrawWalls();
+   UpdateClientControls();
+   TransformPushWalls();
+   TransformDoors();
+#else
    TransformPushWalls();
    TransformDoors();
    UpdateClientControls();
    DrawWalls();
+#endif
    UpdateClientControls();
    walltime=GetFastTics()-dtime;
-
 }
 
 
@@ -2120,7 +2317,7 @@ void WallRefresh (void)
 =
 ====================
 */
-
+#ifndef RT_OPENGL
 void GetRainBoundingBox (int * xmin, int * xmax, int * ymin, int * ymax)
 {
    wallcast_t * post;
@@ -2161,6 +2358,7 @@ void GetRainBoundingBox (int * xmin, int * xmax, int * ymin, int * ymax)
          (*ymax)=y;
       }
 }
+#endif
 
 /*
 ========================
@@ -2170,6 +2368,7 @@ void GetRainBoundingBox (int * xmin, int * xmax, int * ymin, int * ymax)
 ========================
 */
 
+#ifndef RT_OPENGL
 void InterpolateWall (visobj_t * plane)
 {
    int d1,d2;
@@ -2421,6 +2620,7 @@ void InterpolateMaskedWall (visobj_t * plane)
          }
    }
 }
+#endif
 
 /*
 ========================
@@ -2433,6 +2633,9 @@ void InterpolateMaskedWall (visobj_t * plane)
 #define PLY  16
 void DrawPlayerLocation ( void )
 {
+#ifdef RT_OPENGL
+	STUB_FUNCTION; return;
+#endif
    int i;
    char buf[30];
 
@@ -2478,32 +2681,89 @@ void      ThreeDRefresh (void)
 
   RestoreMessageBackground();
 
+#ifndef RT_OPENGL
   bufferofs += screenofs;
+#endif
+  RefreshClear();	//clear spotvis
 
-  RefreshClear();
+#ifdef RT_OPENGL
+	rtglClear(GL_DEPTH_BUFFER_BIT);
+	rtglDisable(GL_BLEND);
+	rtglEnable(GL_DEPTH_TEST);
+//	rtglColor3f(1.0f,1.0f,1.0f);	//reset color
+
+//	printf("X%li, Y%li, Z%li, A%i, UA%i, LH%d\n", -viewx / 65536, -viewy / 65536, player->z, player->angle, player->yzangle, levelheight);
+
+	if (MISCVARS->GASON == 1)
+		VGL_SetGas(MISCVARS->gasindex);
+	else
+		VGL_SetFog();
+#endif
 
   UpdateClientControls ();
 
 //
 // follow the walls from there to the right, drawwing as we go
 //
-
 	visptr = &vislist[0];
-	WallRefresh ();
+	WallRefresh ();		//sets OpenGL camera
 
    UpdateClientControls ();
 
+#ifndef RT_OPENGL
 	if (fandc)
 		DrawPlanes();
+#endif
 
    UpdateClientControls ();
 
 //
 // draw all the scaled images
 //
-    DrawScaleds();                                         // draw scaled stuff
 
-   UpdateClientControls ();
+#ifdef RT_OPENGL
+	rtglEnable(GL_ALPHA_TEST);
+	rtglEnable(GL_BLEND);
+#endif
+	DrawScaleds();                                         // draw scaled stuff
+
+#ifdef RT_OPENGL
+	//only 2D operations from here on
+	rtglDisable(GL_DEPTH_TEST);
+	rtglDisable(GL_ALPHA_TEST);
+
+	//FIXME
+	rtglLoadIdentity();
+	gluLookAt (0,0, 1.72823f, 0,0,0, 0,1,0);		//set [1:-1] y
+	rtglScalef((GLfloat) rtgl_hud_aspectratio, 1, 1);		//[1:-1] x
+	rtglTranslatef(-1,1,0);
+	rtglScalef(1.0f / 160.0f, 1.0f / 100.0f, 1);
+
+	rtglDisable(GL_LIGHT0);
+	rtglEnable(GL_LIGHT1);
+	GLfloat light_position [4] = {0,0,0, 1.0f};
+	rtglLightfv(GL_LIGHT1, GL_POSITION, light_position);
+	rtglNormal3f(0, 0, 1.0f);
+
+	//printf("min/max, base min/max: %d/%d, %d/%d\n", minshade, maxshade, baseminshade, basemaxshade);
+	assert(basemaxshade > 0);
+	assert(basemaxshade < 32);
+
+	//calc light
+	GLfloat val = 1 - (float) maxshade / ((float) basemaxshade * 16.0f);
+
+	//if (val != 0.0f) printf ("%f\n", val);
+
+	assert(val >= 0);
+
+	{
+		GLfloat spec[4] = { val, val, val, 1.0f};
+		rtglLightfv(GL_LIGHT1, GL_AMBIENT, spec);
+		rtglLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 1.0f);
+	}
+#endif
+
+	UpdateClientControls ();
 
 	if (!missobj)
 		{
@@ -2523,23 +2783,36 @@ void      ThreeDRefresh (void)
 		  DrawScreenSprite(SCREENEYE->targettilex,SCREENEYE->targettiley,SCREENEYE->state->condition + GIBEYE1 + shapestart);
       UpdateClientControls ();
 
+#ifdef RT_OPENGL
+	rtglDisable(GL_LIGHT1);
+	rtglEnable(GL_LIGHT0);
+	rtglDisable(GL_FOG);	//shouldn't have effect on HUD AND gasmask
+	rtglDisable(GL_LIGHTING);
+#endif
 	   if (player->flags&FL_GASMASK)
 		   DrawScreenSizedSprite(gmasklump);
 
-
       if ( SHOW_PLAYER_STATS() )
          {
-         DrawStats ();
+         DrawStats ();	//ammo + health bar
          }
+
+#ifdef RT_OPENGL
+      DrawPlayScreen (false);	//TOP_STATUSBAR time score etc
+#endif
 
       DoBorderShifts ();
 
       UpdateClientControls ();
       }
 
+#ifndef RT_OPENGL
    bufferofs -= screenofs;
+#endif
    DrawMessages();
+#ifndef RT_OPENGL
    bufferofs += screenofs;
+#endif
 
    if ( ((GamePaused==true) && (!Keyboard[sc_LShift])) ||
         (controlupdatestarted==0)
@@ -2553,15 +2826,21 @@ void      ThreeDRefresh (void)
    {
       if (newlevel==true)
          ShutdownClientControls();
+#ifndef RT_OPENGL
       bufferofs-=screenofs;
+#endif
       DrawPlayScreen (true);
       RotateBuffer(0,FINEANGLES,FINEANGLES*8,FINEANGLES,(VBLCOUNTER*3)/4);
+#ifndef RT_OPENGL
       bufferofs+=screenofs;
+#endif
       fizzlein = false;
       StartupClientControls();
    }
 
+#ifndef RT_OPENGL
    bufferofs -= screenofs;
+#endif
 
    UpdateClientControls ();
 
@@ -2668,6 +2947,9 @@ void DrawScaledScreen(int x, int y, int step, byte * src)
 
 void DoLoadGameSequence ( void )
 {
+#ifdef RT_OPENGL
+	STUB_FUNCTION; return;
+#endif
    int x;
    int y;
    int dx;
@@ -2740,6 +3022,9 @@ byte * RotatedImage;
 boolean RotateBufferStarted = false;
 void StartupRotateBuffer ( int masked)
 {
+#ifdef RT_OPENGL
+	VGL_GrabFramebuffer();
+#else
 	int k;////zxcv
    int a,b;
 
@@ -2791,7 +3076,7 @@ void StartupRotateBuffer ( int masked)
 				*(RotatedImage+99+((a+28)<<9)+b)=*((byte *)bufferofs+(a*linewidth)+b);
 		  }
 	  }
-
+#endif
 }
 /* copier liner af 1024 bredde
 a=0=14436 a=1=14848 a=2=15360 a=3=15872  -> 512 i difference
@@ -2807,11 +3092,16 @@ a=0=14436 a=1=14848 a=2=15360 a=3=15872  -> 512 i difference
 
 void ShutdownRotateBuffer ( void )
 {
+#ifdef RT_OPENGL
+	rtglDisable(GL_TEXTURE_RECTANGLE_NV);
+	rtglEnable(GL_TEXTURE_2D);
+#else
    if (RotateBufferStarted == false)
       return;
 
    RotateBufferStarted = false;
    SafeFree(RotatedImage);
+#endif
 }
 
 //******************************************************************************
@@ -2850,6 +3140,9 @@ void ScaleAndRotateBuffer (int startangle, int endangle, int startscale, int end
    CalcTics();
    for (i=0;i<time;i+=tics)
       {//zxcv
+#ifdef RT_OPENGL
+	rtglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+#endif
       DrawRotatedScreen(Xh,Yh, (byte *)bufferofs,(angle>>16)&(FINEANGLES-1),scale>>6,0);
       FlipPage();
       scale+=(scalestep*tics);
@@ -2887,6 +3180,9 @@ void ScaleAndRotateBuffer (int startangle, int endangle, int startscale, int end
 void RotateBuffer (int startangle, int endangle, int startscale, int endscale, int time)
 {
    int savetics;
+#ifdef RT_OPENGL
+   if (!rtgl_has_texture_rectangle) return;
+#endif
 
    //save off fastcounter
 
@@ -2911,6 +3207,32 @@ void RotateBuffer (int startangle, int endangle, int startscale, int endscale, i
 
 void DrawRotatedScreen(int cx, int cy, byte *destscreen, int angle, int scale, int masked)
 {//ZXCV
+#ifdef RT_OPENGL
+	rtglPushMatrix();
+
+	/* 3. move pic to cx, cy */
+	rtglTranslatef(cx,-cy, 0);
+
+	/* 2. scale and rotate */
+	rtglRotatef( ((float) angle * 360.0f) / 2048.0f + 90.0f, 0, 0, 1);
+	/* Scale seems to be in [2048, 16384] */
+	assert (scale != 0);
+	rtglScalef(2048.0f / (float) scale, 2048.0f / (float) scale, 1);
+
+	/* fix widescreen */
+	if (((float) rtgl_screen_width / (float) rtgl_screen_height) > 4.0f/3.0f)
+		 rtglScalef(1, ((float) rtgl_screen_width / (float) rtgl_screen_height) *3.0f/4.0f, 1);
+
+	/* 1. center pic at (0,0) */
+	rtglTranslatef(-100.0f, 160.0f, 0);
+	/* screengrab has x, y swapped */
+
+	VGL_Draw2DTexture(0, 0, 200, 320 , (float) rtgl_screen_height, (float) rtgl_screen_width);
+
+	rtglPopMatrix();
+//	printf("Rotate: %d, %d, %d, %d\n", cx, cy, angle, scale);
+	return;
+#else
    int     c, s;
    int     xst, xct;
    int     y;
@@ -2963,7 +3285,7 @@ void DrawRotatedScreen(int cx, int cy, byte *destscreen, int angle, int scale, i
             DrawMaskedRotRow(Xr,screen+ylookup[y],RotatedImage);
          }
       }
-
+#endif
 }
 
 
@@ -2975,6 +3297,9 @@ void DrawRotatedScreen(int cx, int cy, byte *destscreen, int angle, int scale, i
 
 void DrawScaledPost ( int height, byte * src, int offset, int x)
 {
+#ifdef RT_OPENGL
+	STUB_FUNCTION; return;
+#endif
    patch_t *p;
 
    p=(patch_t *)src;
@@ -3014,10 +3339,14 @@ void ApogeeTitle (void)
 //   DoLaserShoot("apogee");
 //   DoZIntro();
 
+#ifndef RT_OPENGL
    VL_ClearBuffer (bufferofs, 255);
+#endif
    DrawNormalSprite (0, 0, W_GetNumForName("ap_titl"));
 
+#ifndef RT_OPENGL
    StartupRotateBuffer (1);
+#endif
 
    //save off fastcounter
 
@@ -3050,13 +3379,22 @@ void ApogeeTitle (void)
 
    while (time>=0)
       {
-      VL_DrawPostPic (W_GetNumForName("ap_wrld"));
+	VL_DrawPostPic (W_GetNumForName("ap_wrld"));
+#ifdef RT_OPENGL
+	// FIXME No rotation effect
+	DrawNormalSprite (-48, 0, W_GetNumForName("ap_titl"));
+#endif
       IN_PumpEvents();
 
       x=100+FixedMul(APOGEEXMAG,sintable[anglex>>16]);
 
+#ifndef RT_OPENGL
       DrawRotatedScreen(x,y>>16,(byte *)bufferofs,(angle>>16)&(FINEANGLES-1),scale>>16,1);
+#endif
       FlipPage();
+#ifndef DOS
+      SDL_Delay(10);
+#endif
       CalcTics();
       angle+=dangle*tics;
       scale+=dscale*tics;
@@ -3069,11 +3407,18 @@ void ApogeeTitle (void)
    CalcTics();
    CalcTics();
    VL_DrawPostPic (W_GetNumForName("ap_wrld"));
+#ifdef RT_OPENGL
+   DrawNormalSprite (-48, 0, W_GetNumForName("ap_titl"));
+#else
    DrawRotatedScreen(x,y>>16,(byte *)bufferofs,0,APOGEESCALEEND,1);
+#endif
    FlipPage();
 
    while (MU_SongPlaying())
       {
+#ifndef DOS
+	SDL_Delay(10);
+#endif
       IN_PumpEvents();
       if ((LastScan) || IN_GetMouseButtons())
          goto apogeeexit;
@@ -3139,6 +3484,9 @@ void DopefishTitle (void)
 
 void RotationFun ( void )
 {
+#ifdef RT_OPENGL
+	STUB_FUNCTION; return;
+#endif
    int   angle;
    int   scale;
    int   x,y;
@@ -3350,6 +3698,11 @@ void UpdateScreenSaver ( void )
 
 void DrawBackground ( byte * bkgnd )
 {
+#ifdef RT_OPENGL
+	DrawNormalSprite(0, 0, bkgnd);
+	return;
+#endif
+
 //   int plane;
    int size;
 
@@ -3369,6 +3722,7 @@ void DrawBackground ( byte * bkgnd )
 //
 //******************************************************************************
 
+#ifndef RT_OPENGL
 void PrepareBackground ( byte * bkgnd )
 {
 //   int plane;
@@ -3382,18 +3736,26 @@ void PrepareBackground ( byte * bkgnd )
       bkgnd+=size;
       }
 }
+#endif
 
 //******************************************************************************
 //
 // WarpString
 //
 //******************************************************************************
-
+#ifdef RT_OPENGL
+void WarpString (
+                  int x, int y, int endx, int endy,
+                  int time, int back, char * str
+                )
+{
+#else
 void WarpString (
                   int x, int y, int endx, int endy,
                   int time, byte * back, char * str
                 )
 {
+#endif
    int dx;
    int dy;
    int cx;
@@ -3411,7 +3773,6 @@ void WarpString (
 
    while (time>0)
       {
-
       DrawBackground ( back );
       US_ClippedPrint (cx>>16, cy>>16, str);
       FlipPage();
@@ -3427,7 +3788,6 @@ void WarpString (
   // DrawBackground ( back );
   // US_ClippedPrint (endx, endy, str);
   // FlipPage();
-
 }
 
 
@@ -3444,10 +3804,17 @@ void WarpString (
 //
 //******************************************************************************
 
+#ifdef RT_OPENGL
+void WarpSprite (
+                  int x, int y, int endx, int endy,
+                  int time, int back, int shape
+                )
+#else
 void WarpSprite (
                   int x, int y, int endx, int endy,
                   int time, byte * back, int shape
                 )
+#endif
 {
    int dx;
    int dy;
@@ -3591,7 +3958,11 @@ void DoEndCinematic ( void )
    int time1,time2;
    byte * tmp;
    byte * sky;
+#ifndef RT_OPENGL
    byte * bkgnd;
+#else
+   int bkgnd;
+#endif
    int i;
 
    byte pal[768];
@@ -3602,13 +3973,19 @@ void DoEndCinematic ( void )
 
    MU_StartSong(song_youwin);
 
+#ifndef RT_OPENGL
    bkgnd=SafeMalloc(800*linewidth);
+#endif
 
    trilogo=W_GetNumForName("trilogo");
    world=W_GetNumForName("ap_wrld");
    group=W_GetNumForName("mmbk");
    VL_DrawPostPic (trilogo);
+#ifndef RT_OPENGL
    PrepareBackground ( bkgnd );
+#else
+   bkgnd = trilogo;
+#endif
 
    WarpSprite (160, -100, 160, 100, (VBLCOUNTER*3), bkgnd, W_GetNumForName("youwin"));
    if (LastScan !=0)
@@ -3618,12 +3995,18 @@ void DoEndCinematic ( void )
 fadelogo:
    MenuFadeOut();
    ClearGraphicsScreen();
+#ifndef RTGL_OPENGL
    memcpy(&pal[0],W_CacheLumpName("ap_pal",PU_CACHE,CvtNull,1),768);
    VL_NormalizePalette(&pal[0]);
    SwitchPalette(&pal[0],35);
+#endif
 
    VL_DrawPostPic (world);
+#ifndef RT_OPENGL
    PrepareBackground ( bkgnd );
+#else
+   bkgnd = world;
+#endif
 
    WarpSprite (160, 250, 160, 100, (VBLCOUNTER*3), bkgnd, W_GetNumForName("wrldsafe"));
    if (LastScan !=0)
@@ -3644,7 +4027,7 @@ fadeworld:
    ClearGraphicsScreen();
    MenuFadeIn();
 
-
+#ifndef RT_OPENGL
    sky=W_CacheLumpNum(W_GetNumForName("SKYSTART")+2,PU_CACHE,CvtNull,1);
    tmp=sky;
    for (x=0;x<256;x++)
@@ -3664,6 +4047,11 @@ fadeworld:
          *((byte *)bufferofs+ylookup[y]+x)=*tmp++;
          }
       }
+#else
+	VGL_Bind_Texture(W_GetNumForName("SKYSTART")+2, RTGL_TEXTURE_SKY | 256);
+	VGL_Draw2DTexture(0, 0, 320, 200, 1.0f, 1.0f);
+	//FIXME ROTATE SKY...
+#endif
 
    for(i=0;i<5;i++)
       {
@@ -3675,7 +4063,9 @@ fadeworld:
       DrawUnScaledSprite (tx, ty, shape,16);
       }
 
+#ifndef RT_OPENGL
    PrepareBackground ( bkgnd );
+#endif
 
    //CurrentFont = (font_t *)W_CacheLumpName ("newfnt1", PU_CACHE);
    CurrentFont = smallfont;
@@ -3719,6 +4109,7 @@ fadeworld:
 
    sky=W_CacheLumpNum(W_GetNumForName("SKYSTART")+2,PU_CACHE,CvtNull,1);
    tmp=sky;
+#ifndef RT_OPENGL
    for (x=0;x<256;x++)
       {
       VGAWRITEMAP(x&3);
@@ -3736,6 +4127,9 @@ fadeworld:
          *((byte *)bufferofs+ylookup[y]+x)=*tmp++;
          }
       }
+#else
+      //FIXME SKYWHAT?
+#endif
 
    for(i=0;i<5;i++)
       {
@@ -3749,12 +4143,16 @@ fadeworld:
 
 
    shape = W_GetNumForName("robogrd3");
+#ifndef RT_OPENGL
    PrepareBackground ( bkgnd );
+#endif
    WarpSprite (420,100,300,100,VBLCOUNTER*3,bkgnd,shape);
    if (LastScan !=0)
       goto finalfade;
 
+#ifndef RT_OPENGL
    PrepareBackground ( bkgnd );
+#endif
    WarpString (200,80,200,80,VBLCOUNTER*3,bkgnd, "Am I late?");
    if (LastScan !=0)
       goto finalfade;
@@ -3785,7 +4183,9 @@ finalfade:
       I_Delay(10);
       }
 
+#ifndef RT_OPENGL
    SafeFree(bkgnd);
+#endif
 }
 #else
 
@@ -3992,16 +4392,24 @@ void DoTransmitterExplosion ( void )
    CalcTics();
    CalcTics();
    DrawNormalSprite(0,0,W_GetNumForName("transmit"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    SetupTransmitterExplosions ();
    CacheTransmitterExplosions ();
+#ifndef RT_OPENGL
    DrawBackground ( back );
+#endif
    FlipPage();
    VL_FadeIn (0, 255, origpal, 30);
    SHAKETICS=VBLCOUNTER*15;
    for (i=0;i<(VBLCOUNTER*15);i+=tics)
       {
+#ifndef RT_OPENGL
       DrawBackground ( back );
+#else
+      DrawNormalSprite(0,0,W_GetNumForName("transmit"));
+#endif
       DrawTransmitterExplosions ();
       FlipPage();
       CalcTics();
@@ -4025,9 +4433,13 @@ void ShowTransmitter ( void )
    MenuFadeOut();
    DrawNormalSprite(0,0,W_GetNumForName("transmit"));
    FlipPage();
+#ifdef RT_OPENGL
+   I_Delay(30);
+#else
    VL_FadeIn (0, 255, origpal, 30);
    I_Delay(30);
    VL_FadeOut (0, 255, 0, 0, 0, 30);
+#endif
 }
 
 void ShowFinalDoor ( void )
@@ -4037,6 +4449,16 @@ void ShowFinalDoor ( void )
    MenuFadeOut();
 
    VL_ClearBuffer (bufferofs, 0);
+#ifdef RT_OPENGL
+   memcpy(&pal[0],W_CacheLumpName("findrpal",PU_CACHE,CvtNull, 1),768);
+   VL_NormalizePalette(&pal[0]);
+   VL_SetPalette(pal);
+   DrawNormalSprite (0, (200-120)>>1, W_GetNumForName("finldoor"));
+   VL_SetPalette(origpal);
+   FlipPage();
+   SD_Play(SD_OPENDOORSND);
+   I_Delay(30);
+#else
    DrawNormalSprite (0, (200-120)>>1, W_GetNumForName("finldoor"));
    FlipPage();
    memcpy(&pal[0],W_CacheLumpName("findrpal",PU_CACHE,CvtNull, 1),768);
@@ -4045,6 +4467,7 @@ void ShowFinalDoor ( void )
    VL_FadeIn (0, 255, pal, 30);
    I_Delay(30);
    VL_FadeOut (0, 255, 0, 0, 0, 30);
+#endif
 }
 
 void ShowFinalFire ( void )
@@ -4054,12 +4477,22 @@ void ShowFinalFire ( void )
    MenuFadeOut();
 
    VL_ClearBuffer (bufferofs, 0);
+#ifdef RT_OPENGL
+   memcpy(&pal[0],W_CacheLumpName("finfrpal",PU_CACHE,CvtNull, 1),768);
+   VL_NormalizePalette(&pal[0]);
+   VL_SetPalette(pal);
+   DrawNormalSprite (0, (200-120)>>1, W_GetNumForName("finlfire"));
+   FlipPage();
+   VL_SetPalette(origpal);
+   SD_Play(SD_BAZOOKAFIRESND);
+#else
    DrawNormalSprite (0, (200-120)>>1, W_GetNumForName("finlfire"));
    FlipPage();
    memcpy(&pal[0],W_CacheLumpName("finfrpal",PU_CACHE,CvtNull, 1),768);
    VL_NormalizePalette(&pal[0]);
    SD_Play(SD_BAZOOKAFIRESND);
    VL_FadeIn (0, 255, pal, 30);
+#endif
    SD_Play(SD_FIREBOMBFIRESND);
    I_Delay(2);
    SD_Play(SD_HEATSEEKFIRESND);
@@ -4104,10 +4537,16 @@ void ShowFinalFire ( void )
    SD_Play(SD_DRUNKFIRESND);
    SD_Play(SD_BAZOOKAFIRESND);
    I_Delay(4);
+#ifndef RT_OPENGL
    VL_FadeOut (0, 255, 0, 0, 0, 30);
+#endif
 }
 
+#ifdef RT_OPENGL
+void ScrollString ( int cy, char * string, int bkgnd, int scrolltime, int pausetime )
+#else
 void ScrollString ( int cy, char * string, byte * bkgnd, int scrolltime, int pausetime )
+#endif
 {
    int x,y;
    int width,height;
@@ -4136,54 +4575,86 @@ void ScrollString ( int cy, char * string, byte * bkgnd, int scrolltime, int pau
 
 void DoBurningCastle ( void )
 {
+#ifndef RT_OPENGL
    byte * back;
+#else
+   int back;
+#endif
 
    LastScan=0;
    VL_ClearVideo(0);
+#ifndef RT_OPENGL
    back=SafeMalloc(800*linewidth);
+#endif
 
    DrawNormalSprite(0,0,W_GetNumForName("finale"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#else
+  back = W_GetNumForName("finale");
+#endif
    CurrentFont = smallfont;
    FlipPage();
    VL_FadeIn (0, 255, origpal, 30);
    CurrentFont = (font_t *)W_CacheLumpName ("newfnt1", PU_STATIC, Cvt_font_t, 1 );
    ScrollString ( 150, &burnCastle1Msg[0], back, 4*VBLCOUNTER, 80);
    W_CacheLumpName ("newfnt1", PU_CACHE, Cvt_font_t, 1);
+#ifndef RT_OPENGL
    VL_FadeOut (0, 255, 0, 0, 0, 80);
    SafeFree(back);
+#endif
 }
 
 void DoFailedScreen ( void )
 {
+#ifndef RT_OPENGL
    byte * back;
 
    back=SafeMalloc(800*linewidth);
+#else
+   int back;
+#endif
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#else
+   back = W_GetNumForName("trilogo");
+#endif
    CurrentFont = smallfont;
    FlipPage();
    VL_FadeIn (0, 255, origpal, 30);
    ScrollString ( 100, &notDoneMsg[0], back, 4*VBLCOUNTER, 100);
    VL_FadeOut (0, 255, 0, 0, 0, 80);
+#ifndef RT_OPENGL
    SafeFree(back);
+#endif
 }
 
 void DoTryAgainScreen ( void )
 {
+#ifndef RT_OPENGL
    byte * back;
 
    back=SafeMalloc(800*linewidth);
+#else
+   int back;
+#endif
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#else
+   back = W_GetNumForName("trilogo");
+#endif
    CurrentFont = smallfont;
    FlipPage();
    VL_FadeIn (0, 255, origpal, 30);
    ScrollString ( 100, tryAgainMsg, back, 4*VBLCOUNTER, 80);
    VL_FadeOut (0, 255, 0, 0, 0, 80);
+#ifndef RT_OPENGL
    SafeFree(back);
+#endif
 }
 
 void ResetWorldExplosion ( ExplosionType * Explosion )
@@ -4224,21 +4695,31 @@ void DestroyEarth ( void )
    int i;
 
    VL_ClearVideo(0);
+#ifndef RT_OPENGL
    back=SafeMalloc(800*linewidth);
+#endif
 
    CalcTics();
    CalcTics();
    DrawNormalSprite(0,0,W_GetNumForName("ourearth"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    SetupWorldExplosions ();
    CacheTransmitterExplosions ();
+#ifndef RT_OPENGL
    DrawBackground ( back );
+#endif
    FlipPage();
    VL_FadeIn (0, 255, origpal, 30);
    SHAKETICS=VBLCOUNTER*10;
    for (i=0;i<(VBLCOUNTER*10);i+=tics)
       {
+#ifndef RT_OPENGL
       DrawBackground ( back );
+#else
+      DrawNormalSprite(0,0,W_GetNumForName("ourearth"));
+#endif
       DrawTransmitterExplosions ();
       FlipPage();
       CalcTics();
@@ -4251,7 +4732,9 @@ void DestroyEarth ( void )
    VL_FadeOut (0, 255, 0, 0, 0, 50);
    TurnShakeOff();
 
+#ifndef RT_OPENGL
    SafeFree(back);
+#endif
 }
 
 boolean DestroyedAllEggs ( void )
@@ -4272,6 +4755,17 @@ void DoSanNicolas ( void )
 
    LastScan=0;
    VL_ClearVideo(0);
+#ifdef RT_OPENGL
+   memcpy(&pal[0],W_CacheLumpName("nicpal",PU_CACHE, CvtNull, 1),768);
+   VL_NormalizePalette(&pal[0]);
+
+   VL_SetPalette(pal);
+   DrawNormalSprite(0,16,W_GetNumForName("nicolas"));
+   DrawNormalSprite(0,200-58,W_GetNumForName("budgcut"));
+   VL_SetPalette(origpal);
+   FlipPage();
+   I_Delay(60);
+#else
    DrawNormalSprite(0,16,W_GetNumForName("nicolas"));
    DrawNormalSprite(10,200-58,W_GetNumForName("budgcut"));
    FlipPage();
@@ -4280,16 +4774,25 @@ void DoSanNicolas ( void )
    VL_FadeIn (0, 255, pal, 30);
    I_Delay(60);
    VL_FadeOut (0, 255, 0, 0, 0, 80);
+#endif
 }
 
 void PlayerQuestionScreen ( void )
 {
+#ifndef RT_OPENGL
    byte * back;
 
    back=SafeMalloc(800*linewidth);
+#else
+   int back;
+#endif
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#else
+   back = W_GetNumForName("trilogo");
+#endif
    CurrentFont = smallfont;
    FlipPage();
    VL_FadeIn (0, 255, origpal, 30);
@@ -4298,78 +4801,114 @@ void PlayerQuestionScreen ( void )
    ScrollString ( 100, &youWin1Msg[0], back, 4*VBLCOUNTER, 50);
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawXYPic ( 8, 100-24, W_GetNumForName("player2"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    CurrentFont = smallfont;
    SD_Play(SD_PLAYERTBSND);
    ScrollString ( 100, &youWin2Msg[0], back, 4*VBLCOUNTER, 100);
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawXYPic ( 8, 100-24, W_GetNumForName("player1"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    SD_Play(SD_PLAYERTCSND);
    ScrollString ( 100, &youWin3Msg[0], back, 4*VBLCOUNTER, 100);
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawXYPic ( 8, 100-24, W_GetNumForName("player4"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    SD_Play(SD_PLAYERLNSND);
    ScrollString ( 100, &youWin4Msg[0], back, 4*VBLCOUNTER, 100);
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawXYPic ( 8, 100-24, W_GetNumForName("player3"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    SD_Play(SD_PLAYERDWSND);
    ScrollString ( 100, &youWin5Msg[0], back, 4*VBLCOUNTER, 100);
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawXYPic ( 8, 100-24, W_GetNumForName("player5"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    SD_Play(SD_PLAYERIPFSND);
    ScrollString ( 100, &youWin6Msg[0], back, 4*VBLCOUNTER, 100);
    W_CacheLumpName ("newfnt1", PU_CACHE, Cvt_font_t, 1);
    VL_FadeOut (0, 255, 0, 0, 0, 80);
+#ifndef RT_OPENGL
    SafeFree(back);
+#endif
 }
 
 void DoYouWin ( void )
 {
-   pic_t * pic;
+#ifndef RT_OPENGL
    byte * back;
 
    back=SafeMalloc(800*linewidth);
+#else
+   int back;
+#endif
    LastScan=0;
    VL_ClearVideo(0);
+#ifndef RT_OPENGL
+   pic_t * pic;
    pic = (pic_t *) W_CacheLumpNum (W_GetNumForName ("mmbk"), PU_CACHE, Cvt_pic_t, 1);
    VWB_DrawPic (0, 0, pic);
    PrepareBackground ( back );
+#else
+   back = W_GetNumForName ("mmbk");
+   DrawXYPic(0,0, (pic_t *) W_CacheLumpNum (W_GetNumForName ("mmbk"), PU_CACHE, Cvt_pic_t, 1));
+#endif
    FlipPage();
    VL_FadeIn (0, 255, origpal, 30);
    CurrentFont = (font_t *)W_CacheLumpName ("newfnt1", PU_STATIC, Cvt_font_t, 1);
    ScrollString ( 100, &youWin7Msg[0], back, 4*VBLCOUNTER, 300);
    W_CacheLumpName ("newfnt1", PU_CACHE, Cvt_font_t, 1);
    VL_FadeOut (0, 255, 0, 0, 0, 80);
+#ifndef RT_OPENGL
    SafeFree(back);
+#endif
 }
 
 void DoFinalEnd ( void )
 {
+#ifndef RT_OPENGL
    pic_t * pic;
    byte * back;
-
    back=SafeMalloc(800*linewidth);
+#else
+   int back;
+#endif
+
    LastScan=0;
    VL_ClearVideo(0);
+#ifndef RT_OPENGL
    pic = (pic_t *) W_CacheLumpNum (W_GetNumForName ("mmbk"), PU_CACHE, Cvt_pic_t, 1);
    VWB_DrawPic (0, 0, pic);
+#else
+   DrawXYPic(0,0, (pic_t *) W_CacheLumpNum (W_GetNumForName ("mmbk"), PU_CACHE, Cvt_pic_t, 1));
+   back = W_GetNumForName ("mmbk");
+#endif
    DrawNormalSprite(0,0,W_GetNumForName("sombrero"));
    DrawNormalSprite(0,0,W_GetNumForName("amflag"));
    DrawNormalSprite(0,0,W_GetNumForName("witchhat"));
    DrawNormalSprite(0,0,W_GetNumForName("esterhat"));
    DrawNormalSprite(0,0,W_GetNumForName("santahat"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    FlipPage();
    VL_FadeIn (0, 255, origpal, 30);
    CurrentFont = (font_t *)W_CacheLumpName ("newfnt1", PU_STATIC, Cvt_font_t, 1);
    ScrollString ( 100, &youWin8Msg[0], back, 4*VBLCOUNTER, 100);
    W_CacheLumpName ("newfnt1", PU_CACHE, Cvt_font_t, 1);
    VL_FadeOut (0, 255, 0, 0, 0, 80);
+#ifndef RT_OPENGL
    SafeFree(back);
+#endif
    VL_ClearVideo(0);
 }
 
@@ -4586,12 +5125,20 @@ static char     playersCutMsg[] =
 
 void DIPCredits ( void )
 {
+#ifndef RT_OPENGL
    byte * back;
 
    back=SafeMalloc(800*linewidth);
+#else
+   int back;
+#endif
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#else
+   back = W_GetNumForName("trilogo");
+#endif
    FlipPage();
    VL_FadeIn (0, 255, origpal, 30);
    CurrentFont = (font_t *)W_CacheLumpName ("newfnt1", PU_STATIC, Cvt_font_t, 1);
@@ -4616,118 +5163,165 @@ void DIPCredits ( void )
    CurrentFont = smallfont;
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("lwgshoo2"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    ScrollString ( 100, &actors1Msg[0], back, 4*VBLCOUNTER, 50);
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("hg2shoo2"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    ScrollString ( 100, &actors2Msg[0], back, 4*VBLCOUNTER, 50);
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("obpshoo1"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    ScrollString ( 100, &actors3Msg[0], back, 4*VBLCOUNTER, 50);
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("ankshoo1"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    ScrollString ( 100, &actors4Msg[0], back, 4*VBLCOUNTER, 50);
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("ligrise4"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    ScrollString ( 100, &actors5Msg[0], back, 4*VBLCOUNTER, 50);
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("tritoss5"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    ScrollString ( 100, &actors6Msg[0], back, 4*VBLCOUNTER, 50);
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("monkdr4"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    ScrollString ( 100, &actors7Msg[0], back, 4*VBLCOUNTER, 50);
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("allksh4"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    ScrollString ( 100, &actors8Msg[0], back, 4*VBLCOUNTER, 50);
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("robogrd1"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    ScrollString ( 100, &actors9Msg[0], back, 4*VBLCOUNTER, 50);
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("darshoo1"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    ScrollString ( 100, &actors10Msg[0], back, 4*VBLCOUNTER, 50);
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("hdope8"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
+   ScrollString ( 100, &actors10Msg[0], back, 4*VBLCOUNTER, 50);
    ScrollString ( 100, &actors11Msg[0], back, 4*VBLCOUNTER, 50);
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("rbody101"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("rhead101"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("rsw01"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    ScrollString ( 100, &actors12Msg[0], back, 4*VBLCOUNTER, 50);
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("tomfly21"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    ScrollString ( 100, &actors13Msg[0], back, 4*VBLCOUNTER, 50);
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
+   ScrollString ( 100, &actors13Msg[0], back, 4*VBLCOUNTER, 50);
    CurrentFont = (font_t *)W_CacheLumpName ("newfnt1", PU_STATIC, Cvt_font_t, 1);
    ScrollString ( 100, &playersCutMsg[0], back, 4*VBLCOUNTER, 40);
 
    CurrentFont = smallfont;
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("cutmark"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    ScrollString ( 100, &cut1Msg[0], back, 4*VBLCOUNTER, 50);
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("cutpat"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    ScrollString ( 100, &cut2Msg[0], back, 4*VBLCOUNTER, 50);
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("cutmari"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    ScrollString ( 100, &cut3Msg[0], back, 4*VBLCOUNTER, 50);
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("cutann"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    ScrollString ( 100, &cut4Msg[0], back, 4*VBLCOUNTER, 50);
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("cutwill"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    ScrollString ( 100, &cut5Msg[0], back, 4*VBLCOUNTER, 50);
 
    VL_DrawPostPic (W_GetNumForName("trilogo"));
    DrawNormalSprite(0,(200-128)>>1,W_GetNumForName("cutstev"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    ScrollString ( 100, &cut6Msg[0], back, 4*VBLCOUNTER, 50);
 
    VL_FadeOut (0, 255, 0, 0, 0, 80);
 
    DrawNormalSprite(0,0,W_GetNumForName("grouppic"));
+#ifndef RT_OPENGL
    PrepareBackground ( back );
+#endif
    FlipPage();
    VL_FadeIn (0, 255, origpal, 30);
    ScrollString ( 175, &dipMsg[0], back, 4*VBLCOUNTER, 140);
    VL_FadeOut (0, 255, 0, 0, 0, 80);
 
    W_CacheLumpName ("newfnt1", PU_CACHE, Cvt_font_t, 1);
+
+#ifndef RT_OPENGL
    SafeFree(back);
+#endif
 }
 
 void DoEndCinematic ( void )
@@ -4775,7 +5369,11 @@ void DoInBetweenCinematic (int yoffset, int lump, int delay, char * string )
    int width,height;
    int x,y;
 
+#ifndef RT_OPENGL
    VL_FadeOut (0, 255, 0, 0, 0, 20);
+#else
+   VL_FadeIn (0, 255, origpal, 20);
+#endif
    VL_ClearBuffer (bufferofs, 0);
    DrawNormalSprite(0,yoffset,lump);
 
@@ -4891,7 +5489,11 @@ void DrawPreviousCredits ( int num, CreditType * Credits )
 //******************************************************************************
 
 extern boolean dopefish;
+#ifdef RT_OPENGL
+void WarpCreditString ( int time, int back, int num, CreditType * Credits)
+#else
 void WarpCreditString ( int time, byte * back, int num, CreditType * Credits)
+#endif
 {
    int dy;
    int cy;
@@ -4965,20 +5567,29 @@ void DoCreditScreen ( void )
 {
    int trilogo;
    int time;
+#ifdef RT_OPENGL
    byte * bkgnd;
+#else
+   int bkgnd;
+#endif
    font_t * oldfont;
    int i;
 	EnableScreenStretch();
    viewwidth = 320;//MAXSCREENWIDTH;
    viewheight = 200;//MAXSCREENHEIGHT;
 
+#ifndef RT_OPENGL
    bkgnd=SafeMalloc(800*linewidth);
-
+#else
+   bkgnd = W_GetNumForName("trilogo");
+#endif
    trilogo=W_GetNumForName("trilogo");
    VL_DrawPostPic (trilogo);
 //  SetTextMode (  );
 
+#ifndef RT_OPENGL
    PrepareBackground ( bkgnd );
+#endif
 
    oldfont=CurrentFont;
 
@@ -5020,7 +5631,9 @@ void DoCreditScreen ( void )
    MenuFadeOut();
    VL_ClearVideo (0);
 
+#ifndef RT_OPENGL
    SafeFree(bkgnd);
+#endif
    CurrentFont=oldfont;
 }
 
@@ -5055,8 +5668,12 @@ void DoMicroStoryScreen ( void )
 
    VL_FadeOut (0, 255, 0, 0, 0, 20);
 
+#ifndef RT_OPENGL
    pic=(pic_t *)W_CacheLumpName("mmbk",PU_CACHE,Cvt_pic_t,1);
    VWB_DrawPic (0, 0, pic);
+#else
+   DrawXYPic(0, 0, (pic_t *)W_CacheLumpName("mmbk",PU_CACHE,Cvt_pic_t,1));
+#endif
    CheckHolidays();
 
    x=15;
@@ -5076,6 +5693,7 @@ void DoMicroStoryScreen ( void )
    VL_FadeOut (0, 255, 0, 0, 0, 20);
 }
 
+#ifndef RT_OPENGL
 void  DrawMenuPost (int height, byte * src, byte * buf)
 {
 	int frac = hp_startfrac;
@@ -5192,6 +5810,7 @@ void DrawSkyPost (byte * buf, byte * src, int height)
 		
 	}*/
 }
+#endif
 
 #define CEILINGCOLOR 24 //default color when no sky or floor
 #define FLOORCOLOR 32
@@ -5201,7 +5820,10 @@ void RefreshClear (void)
 	int start, base;
 	
 	memset(spotvis, 0, sizeof(spotvis));
-	
+#ifdef RT_OPENGL
+	return;
+#else
+
 	if (fandc) {
 		return;
 	}
@@ -5220,5 +5842,5 @@ void RefreshClear (void)
 	if (start > 0) {
 		VL_Bar(0, base, iGLOBAL_SCREENHEIGHT, start, FLOORCOLOR);
 	}
+#endif
 }
-

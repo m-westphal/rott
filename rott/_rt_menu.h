@@ -296,6 +296,10 @@ void DrawSTMenuBuf (int x, int y, int w, int h, boolean up);
 void MusicVolume (void);
 void FXVolume (void);
 
+#ifdef RT_OPENGL
+void OpenGLOptions (void);
+#endif
+
 void DefineKey( void );
 void DefineJoyBtn( void );
 void DefineMouseBtn( void );

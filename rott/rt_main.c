@@ -73,6 +73,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "music.h"
 #include "fx_man.h"
 
+#ifdef RT_OPENGL
+#include "opengl/rt_gl.h"
+#include "opengl/rt_gl_cap.h"
+#endif
+
 volatile int    oldtime;
 volatile int    gametime;
 
@@ -351,8 +356,13 @@ int main (int argc, char *argv[])
             {
             lbm_t * LBM;
 
+#ifndef RT_OPENGL
             LBM = (lbm_t *) W_CacheLumpName( "svendor", PU_CACHE, Cvt_lbm_t, 1);
             VL_DecompressLBM (LBM,true);
+#else
+		VGL_Bind_Texture( W_GetNumForName("svendor"), RTGL_TEXTURE_LBM | 512);
+		VGL_Draw2DTexture(0, 0, 320, 200, 320.0f/512.0f, 200.0f/512.0f);
+#endif
             I_Delay(40);
             MenuFadeOut();
             }
@@ -637,7 +647,11 @@ void CheckCommandLineParameters( void )
             printf("Site License ");
          else
             printf("Commercial ");
+#ifndef RT_OPENGL
          printf ("Version %d.%d\n", ROTTMAJORVERSION,ROTTMINORVERSION);
+#else
+         printf ("Version %d.%d OpenGL\n", ROTTMAJORVERSION,ROTTMINORVERSION);
+#endif
          exit (0);
          break;
        case 11:
@@ -1348,8 +1362,13 @@ void GameLoop (void)
                char str[50];
                int width, height;
 
+#ifndef RT_OPENGL
                LBM = (lbm_t *) W_CacheLumpName( "deadboss", PU_CACHE, Cvt_lbm_t, 1);
                VL_DecompressLBM (LBM,false);
+#else
+		VGL_Bind_Texture( W_GetNumForName("deadboss"), RTGL_TEXTURE_LBM | 512);
+		VGL_Draw2DTexture(0, 0, 320, 200, 320.0f/512.0f, 200.0f/512.0f);
+#endif
                MenuFadeOut();
                switch (gamestate.mapon)
                   {
@@ -1416,6 +1435,9 @@ void GameLoop (void)
                fizzlein = true;
                SetupGameLevel ();
                playstate = ex_stillplaying;
+#ifdef RT_OPENGL
+	       VGL_Setup3DMode();
+#endif
                }
             else
                {
@@ -1863,10 +1885,12 @@ fromloadedgame:
 
       UpdateClientControls();
 
+#ifndef RT_OPENGL
       if ( AutoDetailOn == true )
          {
    		AdaptDetail();
          }
+#endif
 
       UpdateClientControls();
 
@@ -1875,7 +1899,9 @@ fromloadedgame:
 
       UpdatePlayers();
 
+#ifndef RT_OPENGL
       DrawTime( false );
+#endif
 
       UpdateClientControls();
 
@@ -2477,6 +2503,7 @@ void PlayCinematic (void)
       case 0:        // Start of EPISODE 1
 
          MU_StartSong ( song_cinematic1 );
+#ifndef RT_OPENGL
          VL_FadeOut (0, 255, 0, 0, 0, 20);
          VL_ClearBuffer (bufferofs, 0);
          DrawNormalSprite(0,30,W_GetNumForName("nicolas"));
@@ -2487,6 +2514,16 @@ void PlayCinematic (void)
          VL_FadeIn(0,255,pal,20);
          I_Delay (60);
          VL_FadeOut (0, 255, 0, 0, 0, 20);
+#else
+         VL_ClearBuffer (bufferofs, 0);
+         memcpy(&pal[0],W_CacheLumpName("nicpal",PU_CACHE, CvtNull, 1),768);
+         VL_NormalizePalette(&pal[0]);
+         VL_FadeIn(0,255,pal,20);
+         DrawNormalSprite(0,30,W_GetNumForName("nicolas"));
+         DrawNormalSprite(-5,168,W_GetNumForName("oneyear"));
+         FlipPage();
+         I_Delay (60);
+#endif
          IN_UpdateKeyboard();
          if (LastScan!=0)
             {
@@ -2570,4 +2607,8 @@ void PlayCinematic (void)
       break;
 #endif
    }
+#ifdef RT_OPENGL
+	//normal palette
+	VL_SetPalette(origpal);
+#endif
 }

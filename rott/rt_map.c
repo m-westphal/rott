@@ -50,6 +50,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "rt_str.h"
 #include "watcom.h"
 
+#ifdef RT_OPENGL
+#include <assert.h>
+#include "opengl/rt_gl.h"
+#endif
+
 //===========================================================================
 
 
@@ -142,6 +147,10 @@ void FixMapSeen( void )
 
 void DrawMap_Wall (int x, int y, int tile)
 {
+#ifdef RT_OPENGL
+	VGL_Bind_Texture(tile, RTGL_TEXTURE_WALL | RTGL_GENERATE_MIPMAPS | 64);
+	VGL_Draw2DTexture(x*tilesize, y*tilesize, tilesize, tilesize, 1, 1);
+#else
    byte * buf;
    byte * b;
    byte * source;
@@ -165,6 +174,7 @@ void DrawMap_Wall (int x, int y, int tile)
          s+=(hp_srcstep>>10);
          }
       }
+#endif
 }
 
 /*
@@ -190,6 +200,22 @@ void DrawMap_AnimatedWall (int x, int y, int tile)
 
 void DrawMap_SkyTile (int x, int y)
 {
+#ifdef RT_OPENGL
+	extern int skytop;
+	extern int skybottom;
+
+	rtglMatrixMode(GL_TEXTURE);
+	rtglPushMatrix();
+	rtglRotatef(90,0,0,1);
+
+	VGL_Bind_Texture(skytop, RTGL_TEXTURE_SKY | 256);
+	VGL_Draw2DTexture(x*tilesize, y*tilesize, tilesize, tilesize/2, 1, 200.0f/256.0f);
+	VGL_Bind_Texture(skybottom, RTGL_TEXTURE_SKY | 256);
+	VGL_Draw2DTexture(x*tilesize, y*tilesize+tilesize/2, tilesize, tilesize/2, 1, 200.0f/256.0f);
+
+	rtglPopMatrix();
+	rtglMatrixMode(GL_MODELVIEW);
+#else
    byte * buf;
    byte * b;
    byte * s;
@@ -210,6 +236,7 @@ void DrawMap_SkyTile (int x, int y)
          s+=(hp_srcstep>>10);
          }
       }
+#endif
 }
 
 /*
@@ -225,15 +252,31 @@ void DrawMap_MaskedWall (int x, int y, int tile)
    if (IsPlatform(maskobjlist[tile]->tilex,maskobjlist[tile]->tiley))
       {
       if (!(maskobjlist[tile]->flags&MW_ABOVEPASSABLE))
+#ifdef RT_OPENGL
+         DrawMap_MaskedShape(x,y,maskobjlist[tile]->toptexture,128+64);
+#else
          DrawMap_MaskedShape(x,y,maskobjlist[tile]->toptexture,0);
+#endif
       else if (!(maskobjlist[tile]->flags&MW_BOTTOMPASSABLE))
+#ifdef RT_OPENGL
+         DrawMap_MaskedShape(x,y,maskobjlist[tile]->bottomtexture,64);
+#else
          DrawMap_MaskedShape(x,y,maskobjlist[tile]->bottomtexture,1);
+#endif
       else
+#ifdef RT_OPENGL
+         DrawMap_MaskedShape(x,y,maskobjlist[tile]->midtexture,64+128);
+#else
          DrawMap_MaskedShape(x,y,maskobjlist[tile]->midtexture,0);
+#endif
       }
    else
       {
-      DrawMap_MaskedShape(x,y,maskobjlist[tile]->bottomtexture,1);
+#ifdef RT_OPENGL
+      DrawMap_MaskedShape(x,y,maskobjlist[tile]->bottomtexture, 64);
+#else
+      DrawMap_MaskedShape(x,y,maskobjlist[tile]->bottomtexture, 1);
+#endif
       }
 }
 
@@ -255,7 +298,11 @@ void DrawMap_Door (int x, int y, int tile)
    else if (doorobjlist[tile]->texture==doorobjlist[tile]->basetexture)
       DrawMap_Wall(x,y,doorobjlist[tile]->texture);
    else
+#ifdef RT_OPENGL
+      DrawMap_MaskedShape(x,y,doorobjlist[tile]->texture,128+64);
+#else
       DrawMap_MaskedShape(x,y,doorobjlist[tile]->texture,0);
+#endif
 }
 
 /*
@@ -289,10 +336,17 @@ void DrawMap_Actor (int x, int y, objtype * a)
 	if (!(a->flags&FL_SEEN))
       return;
 
+#ifdef RT_OPENGL
+	if (a->flags&FL_TRANSLUCENT)
+	   DrawMap_MaskedShape(x,y,a->shapenum+shapestart, 128);
+	else
+	   DrawMap_MaskedShape(x,y,a->shapenum+shapestart, 128+128);
+#else
    translucent=0;
 	if (a->flags&FL_TRANSLUCENT)
       translucent=1;
    DrawMap_MaskedShape(x,y,a->shapenum+shapestart,translucent);
+#endif
 }
 
 /*
@@ -310,10 +364,17 @@ void DrawMap_Sprite (int x, int y, statobj_t * s)
 	if (!(s->flags&FL_SEEN))
       return;
 
+#ifdef RT_OPENGL
+	if (s->flags&FL_TRANSLUCENT)
+	   DrawMap_MaskedShape(x,y,s->shapenum+shapestart, 128);
+	else
+	   DrawMap_MaskedShape(x,y,s->shapenum+shapestart, 128 + 128);
+#else
    translucent=0;
 	if (s->flags&FL_TRANSLUCENT)
       translucent=1;
    DrawMap_MaskedShape(x,y,s->shapenum+shapestart,translucent);
+#endif
 }
 
 /*
@@ -396,7 +457,11 @@ void DrawMap_Player (int x, int y)
       DrawMap_PlayerArrow(x,y,( RandomNumber("DrawMap_PLAYER",0)>>5) );
    else
       DrawMap_PlayerArrow(x,y,( ( (player->angle+(FINEANGLES/16)) & (FINEANGLES-1) ) >>8) );
+#ifdef RT_OPENGL
+   DrawMap_MaskedShape(x,y,player->shapenum+shapestart,128+128);
+#else
    DrawMap_MaskedShape(x,y,player->shapenum+shapestart,0);
+#endif
 }
 
 /*
@@ -418,7 +483,16 @@ void DrawMap( int cx, int cy )
 
    // Clear buffer
 
+#ifdef RT_OPENGL
+	rtglClearColor( ((float) rtgl_palette[egacolor[mapcolor]].r) / 255.0f,
+			((float) rtgl_palette[egacolor[mapcolor]].g) / 255.0f,
+			((float) rtgl_palette[egacolor[mapcolor]].b) / 255.0f,
+			0);
+	rtglClear(GL_COLOR_BUFFER_BIT);
+	rtglClearColor(0,0,0,0);
+#else
    VL_ClearBuffer (bufferofs, egacolor[mapcolor]);
+#endif
 
    x=cx>>16;
    y=cy>>16;
@@ -555,6 +629,7 @@ void DrawMap( int cx, int cy )
 =======================
 */
 
+#ifndef RT_OPENGL
 void SetupFullMap( void )
 {
    int ty;
@@ -571,6 +646,7 @@ void SetupFullMap( void )
    for (ty=37;ty<37+127;ty++)
       memset((byte *)bufferofs+ylookup[ty]+96,0,128);
 }
+#endif
 
 /*
 =======================
@@ -580,6 +656,7 @@ void SetupFullMap( void )
 =======================
 */
 
+#ifndef RT_OPENGL
 void DrawFullMap( void )
 {
    statobj_t * s;
@@ -698,6 +775,7 @@ void DrawFullMap( void )
       }
    FlipPage();
 }
+#endif
 
 /*
 =======================
@@ -774,7 +852,11 @@ void ChangeMapScale( int * newx, int * newy, int newmapscale )
       return;
 
    if (newmapscale==FULLMAP_SCALE)
+#ifndef RT_OPENGL
       DrawFullMap();
+#else
+	return;
+#endif
 
    *newx=*newx+(xscale<<15);
    *newy=*newy+(yscale<<15);
@@ -829,6 +911,7 @@ void ShutdownMapper ( void )
    if (mouseenabled && MousePresent)
       PollMouseMove();
 }
+
 
 /*
 =======================

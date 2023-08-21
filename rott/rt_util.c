@@ -49,6 +49,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "modexlib.h"
 #include "rt_cfg.h"
 
+#ifdef RT_OPENGL
+#include "opengl/rt_gl.h"
+#endif
+
 int    egacolor[16];
 byte   *  origpal;
 FILE   *  errout;
@@ -935,6 +939,7 @@ void SwapIntelShortArray(short *s, int num)
 
 void GetPalette(char * palette)
 {
+#ifndef RT_OPENGL
 	int i;
 	SDL_Palette *pal = VL_GetVideoSurface()->format->palette;
 	
@@ -945,6 +950,7 @@ void GetPalette(char * palette)
 		
 		palette += 3;
 	}
+#endif
 }
 
 void SetPalette ( byte * pal )
@@ -1015,6 +1021,9 @@ int US_CheckParm (char *parm, char **strings)
 
 void VL_FillPalette (int red, int green, int blue)
 {
+#ifdef RT_OPENGL
+	STUB_FUNCTION;
+#else
    SDL_Color cmap[256];
    int i;
 
@@ -1026,6 +1035,7 @@ void VL_FillPalette (int red, int green, int blue)
    }
 
    SDL_SetPaletteColors (VL_GetVideoSurface()->format->palette, cmap, 0, 256);
+#endif
 }
 
 //===========================================================================
@@ -1090,6 +1100,19 @@ void VL_NormalizePalette (byte *palette)
 
 void VL_SetPalette (byte *palette)
 {
+#ifdef RT_OPENGL
+	printf("DEBUG: VL_SetPalette(byte*)\n");
+	extern rtgl_pal rtgl_palette[256];
+   int i;
+
+   for (i = 0; i < 256; i++)
+   {
+           rtgl_palette[i].r = (gammatable[(gammaindex<<6)+(*palette++)] * 4);
+           rtgl_palette[i].g = (gammatable[(gammaindex<<6)+(*palette++)] * 4);
+           rtgl_palette[i].b = (gammatable[(gammaindex<<6)+(*palette++)] * 4);
+   }
+
+#else
    SDL_Color cmap[256];
    int i;
 
@@ -1101,6 +1124,7 @@ void VL_SetPalette (byte *palette)
    }
 
    SDL_SetPaletteColors (VL_GetVideoSurface()->format->palette, cmap, 0, 256);
+#endif
 }
 
 
@@ -1117,8 +1141,20 @@ void VL_SetPalette (byte *palette)
 =================
 */
 
-void VL_GetPalette (byte *palette)
+void VL_GetPalette (byte* palette)
 {
+#ifdef RT_OPENGL
+	extern rtgl_pal rtgl_palette[256];
+        int i;
+
+        for (i = 0; i < 256; i++) {
+                palette[0] = rtgl_palette[i].r;
+                palette[1] = rtgl_palette[i].g;
+                palette[2] = rtgl_palette[i].b;
+
+                palette += 3;
+        }
+#else
 	int i;
 	SDL_Palette *pal = VL_GetVideoSurface()->format->palette;
 	
@@ -1129,6 +1165,7 @@ void VL_GetPalette (byte *palette)
 		
 		palette += 3;
 	}
+#endif
 }
 
 

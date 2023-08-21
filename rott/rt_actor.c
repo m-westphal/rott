@@ -57,6 +57,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "fx_man.h"
 
 
+#ifndef DOS
+#include <assert.h>
+#endif
 
 
 #define SGN(x)  (((x) > 0)?(1):(-1))
@@ -11690,7 +11693,8 @@ void  A_MissileWeapon(objtype *ob)
 	int zoffset = 0;
 	switch (ob->obclass)
     {
-
+	  default:
+		assert(false); // assert case exhaustive (otherwise uninitialized vars)
 	  case triadenforcerobj:
 		nobclass = grenadeobj;
 		nstate= &s_grenade1;
@@ -11767,8 +11771,6 @@ void  A_MissileWeapon(objtype *ob)
 		 }
 		break;
 #endif
-    default:
-	;
     }
 
 	SpawnMissile(ob,nobclass,nspeed,AngleBetween(ob,PLAYER[0]),nstate,noffset);
@@ -12543,10 +12545,21 @@ boolean CheckLine (void *from, void *to, int condition)
 	int xydist;
 	int otx,oty,count=0;
 
-
+#ifndef DOS
+	assert (from != NULL);
+	assert (to != NULL);
+#endif
 
    ob = (objtype*)to;
 	orig = (objtype*)from;
+
+#ifndef DOS
+	assert (ob != NULL);
+	assert (orig != NULL);
+	assert (orig->tilex != 0);
+	assert (orig->tiley != 0);
+#endif
+
 	if (ob->which == SPRITE)
 		{
 		destx = ((statobj_t*)to)->x;

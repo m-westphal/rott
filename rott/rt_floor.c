@@ -41,6 +41,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "rt_sound.h"
 #include "rt_rand.h"
 
+#ifdef RT_OPENGL
+#include "opengl/rt_gl.h"
+#endif
+
 /*
 =============================================================================
 
@@ -77,9 +81,9 @@ static int      horizonheight;
 static int      centerskypost;
 static int      oldsky=-1;
 
+#ifndef RT_OPENGL
 void DrawSky( void )
 {
-
    byte * src;
    int dest;
 //   int plane;
@@ -120,6 +124,7 @@ void DrawSky( void )
          }
       }
 }
+#endif
 
 /*
 ===================
@@ -128,6 +133,7 @@ void DrawSky( void )
 =
 ===================
 */
+#ifndef RT_OPENGL
 void DrawFullSky( void )
 {
 
@@ -167,6 +173,7 @@ void DrawFullSky( void )
 
    bufferofs-=screenofs;
 }
+#endif
 
 /*
 ===================
@@ -473,7 +480,7 @@ void SetFCLightLevel (int height)
 }
 
 
-
+#ifndef RT_OPENGL
 void DrawHLine (int xleft, int xright, int yp)
 {
    byte * buf;
@@ -606,3 +613,4 @@ void DrawRow(int count, byte * dest, byte * src)
 		frac += fracstep;
 	}
 }
+#endif

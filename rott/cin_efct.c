@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cin_util.h"
 #include "cin_def.h"
 #include "cin_main.h"
+#include "cin_efct.h"
 #include "f_scale.h"
 #include "watcom.h"
 #include "lumpy.h"
@@ -31,6 +32,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "modexlib.h"
 #include "fli_glob.h"
+
+#ifdef RT_OPENGL
+#include "opengl/rt_gl.h"
+#include "rt_scale.h"
+#endif
 
 static int cin_sprtopoffset;
 static int cin_invscale;
@@ -333,6 +339,19 @@ void PrecacheFlic (flicevent * flic)
 
 void DrawCinematicBackground ( backevent * back )
 {
+#ifdef RT_OPENGL
+	//FIXME height
+	if (back->yoffset != 0) {
+		printf("DrawCinematicBackground: yoffset: %d", back->yoffset);
+
+		rtglPushMatrix();
+		rtglTranslatef(0,-back->yoffset,0);
+		DrawPostPic( W_GetNumForName(back->name) );
+		rtglPopMatrix();
+	}
+	else
+		DrawPostPic( W_GetNumForName(back->name) );
+#else
    byte * src;
    byte * buf;
    lpic_t * pic;
@@ -364,6 +383,7 @@ void DrawCinematicBackground ( backevent * back )
          DrawFilmPost(buf,src,height);
          }
    }
+#endif
 }
 
 /*
@@ -416,6 +436,10 @@ void DrawCinematicMultiBackground ( backevent * back )
 
 void DrawCinematicBackdrop ( backevent * back )
 {
+#ifdef RT_OPENGL
+	STUB_FUNCTION;
+	return;
+#endif
    byte * src;
    byte * shape;
    byte * buf;
@@ -494,7 +518,7 @@ void DrawCinematicSprite ( spriteevent * sprite )
 
    shape=W_CacheLumpNum( W_GetNumForName(sprite->name)+sprite->frame, PU_CACHE, Cvt_patch_t, 1);
    p=(patch_t *)shape;
-   
+
 
    cin_ycenter=sprite->y >> FRACTIONBITS;
    cin_invscale = (height<<FRACTIONBITS)/p->origsize;
@@ -527,10 +551,20 @@ void DrawCinematicSprite ( spriteevent * sprite )
    cin_texturemid = (((p->origsize>>1)+p->topoffset)<<FRACTIONBITS)+(FRACTIONUNIT>>1);
    cin_sprtopoffset = (cin_ycenter<<16) - FixedMul(cin_texturemid,cin_invscale);
 
+#ifdef RT_OPENGL
+       //FIXME broken for VGL_Draw2DTexture!
+       //Movement is not the same as in 2D
+//     rtglTranslatef( 0, 160 - cin_ycenter, (float) xcent / ( (float) 2 * 65536));
+//     rtglScalef(1, 3.0f - (float) cin_iscale / (4*8192.0f),  3.0f - (float) cin_iscale / (4*8192.0f));
+
+       DrawNormalSprite(0, 0, W_GetNumForName(sprite->name)+sprite->frame);
+//     rtglPopMatrix();
+#else
    for (; x1<=x2 ; x1++, frac += cin_iscale)
      {
      ScaleFilmPost(((p->collumnofs[frac>>FRACTIONBITS])+shape),buf+x1);
      }
+#endif
 }
 
 /*
@@ -634,7 +668,11 @@ void DrawBlankScreen ( void )
 */
 void DrawClearBuffer ( void )
 {
+#ifdef RT_OPENGL
+	DrawBlankScreen();
+#else
   memset((byte *)bufferofs,0,iGLOBAL_SCREENWIDTH*iGLOBAL_SCREENHEIGHT);
+#endif
 }
 
 /*
@@ -825,6 +863,7 @@ void PrecacheCinematicEffect ( enum_eventtype type, void * effect )
 
 void ProfileDisplay ( void )
 {
+#ifndef RT_OPENGL
    byte * buf;
    int i;
    byte src[200];
@@ -840,6 +879,7 @@ void ProfileDisplay ( void )
          DrawFilmPost(buf,&src[0],200);
          }
       }
+#endif
 }
 
 /*
@@ -852,6 +892,13 @@ void ProfileDisplay ( void )
 
 void DrawPostPic ( int lumpnum )
 {
+#ifdef RT_OPENGL
+	VGL_Bind_Texture ( lumpnum, RTGL_TEXTURE_LPIC | 512);
+	lpic_t* pic = (lpic_t*) W_CacheLumpNum ( lumpnum, PU_CACHE, Cvt_lpic_t, 1);
+
+	//FIXME 200-height OR 0
+	VGL_Draw2DTexture(0,0, pic->width*4, pic->height, (float) pic->width*4 / 512.0f, (float) pic->height / 512.0f);
+#else
    byte * src;
    byte * buf;
    lpic_t * pic;
@@ -873,4 +920,5 @@ void DrawPostPic ( int lumpnum )
          DrawFilmPost(buf,src,height);
          }
       }
+#endif
 }

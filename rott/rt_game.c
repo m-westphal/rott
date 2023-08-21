@@ -58,6 +58,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "rt_scale.h"
 #include "develop.h"
 
+#ifdef RT_OPENGL
+#include <assert.h>
+#include "opengl/rt_gl.h"
+
+int health_lump_offset;
+int ammo_lump_offset;
+#endif
+
 #if (SHAREWARE == 1)
 #define NUMAMMOGRAPHICS 10
 #else
@@ -168,6 +176,21 @@ extern void    MoveScreenDownRight();
 
 void V_ReDrawBkgnd (int x, int y, int width, int height, boolean shade)
 {
+#ifdef RT_OPENGL
+	//FIXME use shading
+
+	//pic_t
+	VGL_Bind_Texture(W_GetNumForName("mmbk"), RTGL_TEXTURE_PIC | 512);
+
+	float s = 512.0f;
+
+	GLfloat coords[20] = {	((float) y) / s, ((float) x) / s, x, -y, 0,
+				((float) height+y)/s, ((float) x) / s, x, -y - height, 0,
+				((float) height+y)/s, ((float) width + x) / s, x+width,  -y - height, 0,
+				((float) y) / s, ( (float) width + x) / s, x+width, -y, 0 };
+	rtglInterleavedArrays(GL_T2F_V3F, 0, coords);
+	rtglDrawArrays(GL_QUADS, 0, 4);
+#else
    byte *src;
    byte *dest;
    byte *origdest;
@@ -227,6 +250,7 @@ void V_ReDrawBkgnd (int x, int y, int width, int height, boolean shade)
          }
       }
    }
+#endif
 }
 
 
@@ -354,6 +378,10 @@ void SetupPlayScreen
 
    oldplayerhealth  = -1;
    oldpercenthealth = -1;
+#ifdef RT_OPENGL
+	health_lump_offset = W_GetNumForName( "health1b" );
+	ammo_lump_offset = W_GetNumForName( "INF_B" );
+#endif
    }
 
 
@@ -364,6 +392,7 @@ void SetupPlayScreen
 //
 //******************************************************************************
 
+#ifndef RT_OPENGL
 void GameMemToScreen
    (
    pic_t *source,
@@ -384,6 +413,7 @@ void GameMemToScreen
          source->height, x, y );
       }
    }
+#endif
 
 
 //******************************************************************************
@@ -402,6 +432,13 @@ void DrawPlayScreen (boolean bufferofsonly)
 
    if ( SHOW_TOP_STATUS_BAR() )
       {
+#ifdef RT_OPENGL
+	      shape = W_CacheLumpName( "stat_bar", PU_CACHE, Cvt_pic_t, 1 );
+   //FIXME INSERT TOP BAR (320x?)
+      VGL_Bind_Texture(W_GetNumForName("stat_bar"), RTGL_TEXTURE_PIC | 512);
+      VGL_Draw2DTexture(0,0, shape->width*4, shape->height, (float) shape->width*4.0f / 512.0f, (float) shape->height / 512.0f);
+#else
+
 	   if (iGLOBAL_SCREENWIDTH == 640) {
 		   //use this as dummy pic to fill out missing bar
 		  shape = ( pic_t * ) W_CacheLumpName( "bottbar", PU_CACHE, Cvt_pic_t, 1 );
@@ -421,6 +458,7 @@ void DrawPlayScreen (boolean bufferofsonly)
 		  shape = ( pic_t * )W_CacheLumpName( "stat_bar", PU_CACHE, Cvt_pic_t, 1 );
 		  GameMemToScreen( shape, 0, 0, bufferofsonly );
 	   }
+#endif
       }
 
    if ( BATTLEMODE )
@@ -432,6 +470,8 @@ void DrawPlayScreen (boolean bufferofsonly)
       {
       shape = ( pic_t * ) W_CacheLumpName( "bottbar", PU_CACHE, Cvt_pic_t, 1 );
 
+#ifndef RT_OPENGL
+      //FIXME (only for netplay?)
       if ( SHOW_KILLS() )
          {
 		  ShowKillsYoffset = KILLS_HEIGHT;
@@ -468,6 +508,7 @@ void DrawPlayScreen (boolean bufferofsonly)
 				 GameMemToScreen( shape, 0, 184, bufferofsonly );
 			}
          }
+#endif
 
       DrawBarAmmo( bufferofsonly );
       DrawBarHealth( bufferofsonly );
@@ -504,7 +545,12 @@ void DrawPlayScreen (boolean bufferofsonly)
       int height;
 
       character = locplayerstate->player;
+#ifdef RT_OPENGL
+        VGL_Bind_Texture( W_GetNumForName( "man1" ) + character, RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 64);
+        VGL_Draw2DTexture(MEN_X, MEN_Y, men[character]->width*4, men[character]->height, 1.0f, 0.25f);
+#else
       GameMemToScreen( men[ character ], MEN_X, MEN_Y,bufferofsonly );
+#endif
 
       CurrentFont = tinyfont;
 
@@ -549,17 +595,24 @@ void DrawPlayScreen (boolean bufferofsonly)
          }
 
       shape = ( pic_t * )W_CacheLumpNum ( shapenum, PU_CACHE, Cvt_pic_t, 1 );
-
+#ifdef RT_OPENGL
+	VGL_Bind_Texture(shapenum, RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 16);
+	VGL_Draw2DTexture( POWERUP1X, POWERUPY + powerupheight,
+			shape->width*4, shape->height - powerupheight,
+			1.0f, 1.0f - (float) powerupheight / (float) shape->height);
+#else
       GameMemToScreen( eraseb, POWERUP1X, POWERUPY, bufferofsonly );
 
       DrawMPPic( POWERUP1X, POWERUPY + powerupheight, shape->width,
          shape->height - powerupheight, powerupheight,
          ( byte * )&shape->data, bufferofsonly );
+#endif
       }
 
 
    if ( locplayerstate->protectiontime )
       {
+      shapenum = -1;	//fix crash when gas ends (protectiontime = 1 in rt_actor.c)
       if ( player->flags & FL_BPV )
          {
          shapenum = powerpics + 6;
@@ -572,14 +625,21 @@ void DrawPlayScreen (boolean bufferofsonly)
          {
          shapenum = powerpics + 7;
          }
+	if (shapenum != -1) {
+	     shape = ( pic_t * )W_CacheLumpNum( shapenum, PU_CACHE, Cvt_pic_t, 1 );
+#ifdef RT_OPENGL
+		VGL_Bind_Texture(shapenum, RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 16);
+		VGL_Draw2DTexture( POWERUP2X, POWERUPY + protectionheight,
+			shape->width*4, shape->height - protectionheight,
+			1.0f, 1.0f - (float) protectionheight / (float) shape->height);
+#else
+		GameMemToScreen( eraseb, POWERUP2X, POWERUPY, bufferofsonly );
 
-      shape = ( pic_t * )W_CacheLumpNum( shapenum, PU_CACHE, Cvt_pic_t, 1 );
-
-      GameMemToScreen( eraseb, POWERUP2X, POWERUPY, bufferofsonly );
-
-      DrawMPPic( POWERUP2X, POWERUPY + protectionheight, shape->width,
-         shape->height - protectionheight, protectionheight,
-         ( byte * )&shape->data, bufferofsonly );
+		DrawMPPic( POWERUP2X, POWERUPY + protectionheight, shape->width,
+		shape->height - protectionheight, protectionheight,
+		( byte * )&shape->data, bufferofsonly );
+#endif
+	}
       }
    }
 
@@ -1011,8 +1071,13 @@ void DrawPlayers
 
 void StatusDrawPic (unsigned x, unsigned y, pic_t *nums, boolean bufferofsonly)
 {
+	if (nums != NULL)
+#ifdef RT_OPENGL
+		VGL_Draw2DTexture(x, y, nums->width*4, nums->height, 0.5f, 1.0f);
+#else
    DrawMPPic (x, y, nums->width, nums->height, 0,
              (byte *)&nums->data, bufferofsonly);
+#endif
 }
 
 //******************************************************************************
@@ -1099,12 +1164,30 @@ void DrawNumber (int x, int y, int width, int which, boolean bufferofsonly)
    {
       switch (which)
       {
-         case 1: StatusDrawPic (x, y, scorenums[0], bufferofsonly);  x+=8; break;
-         case 2: StatusDrawPic (x, y, lifenums[0], bufferofsonly);   x+=8; break;
-         case 3: StatusDrawPic (x, y, lifeptnums[0], bufferofsonly); x+=6; break;
-         case 4: StatusDrawColoredPic (x, y, scorenums[0], bufferofsonly, playeruniformcolor);   x+=8; break;
-         case 5: StatusDrawPic (x, y, lifeptnums[0], bufferofsonly); x+=6; break;
-         case 6: StatusDrawPic (x, y, lifenums[0], bufferofsonly);   x+=8; break;
+         case 1:
+#ifdef RT_OPENGL
+		 //FIXME BATTLEMODE killnum0
+	VGL_Bind_Texture(W_GetNumForName( "scnum0"), RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 16);
+#endif
+		 StatusDrawPic (x, y, scorenums[0], bufferofsonly);  x+=8; break;
+         case 2:
+	 case 6:
+#ifdef RT_OPENGL
+	VGL_Bind_Texture(W_GetNumForName( "lvnum0"), RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 16);
+#endif
+		 StatusDrawPic (x, y, lifenums[0], bufferofsonly);   x+=8; break;
+         case 3:
+	 case 5:
+#ifdef RT_OPENGL
+	VGL_Bind_Texture(W_GetNumForName( "lfnum0"), RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 16);
+#endif
+		 StatusDrawPic (x, y, lifeptnums[0], bufferofsonly); x+=6; break;
+         case 4:
+#ifdef RT_OPENGL
+	VGL_Bind_Texture(W_GetNumForName( "scnum0"), RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 16);
+	//FIXME COLOR
+#endif
+		 StatusDrawColoredPic (x, y, scorenums[0], bufferofsonly, playeruniformcolor);   x+=8; break;
       }
       z--;
    }
@@ -1114,12 +1197,29 @@ void DrawNumber (int x, int y, int width, int which, boolean bufferofsonly)
    {
       switch (which)
       {
-         case 1: StatusDrawPic (x, y, scorenums[str[c]-'0'], bufferofsonly);  x+=8; break;
-         case 2: StatusDrawPic (x, y, lifenums[str[c]-'0'], bufferofsonly);   x+=8; break;
-         case 3: StatusDrawPic (x, y, lifeptnums[str[c]-'0'], bufferofsonly); x+=6; break;
-         case 4: StatusDrawColoredPic (x, y, scorenums[str[c]-'0'], bufferofsonly, playeruniformcolor);   x+=8; break;
-         case 5: StatusDrawPic (x, y, lifeptnums[str[c]-'0'], bufferofsonly); x+=6; break;
-         case 6: StatusDrawPic (x, y, lifenums[str[c]-'0'], bufferofsonly);   x+=8; break;
+         case 1:
+#ifdef RT_OPENGL
+	VGL_Bind_Texture(W_GetNumForName( "scnum0") + str[c]-'0', RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 16);
+#endif
+		 StatusDrawPic (x, y, scorenums[str[c]-'0'], bufferofsonly);  x+=8; break;
+         case 2:
+         case 6:
+#ifdef RT_OPENGL
+	VGL_Bind_Texture(W_GetNumForName( "lvnum0") + str[c]-'0', RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 16);
+	//FIXME BLACK SPOT
+#endif
+		 StatusDrawPic (x, y, lifenums[str[c]-'0'], bufferofsonly);   x+=8; break;
+         case 3:
+         case 5:
+#ifdef RT_OPENGL
+	VGL_Bind_Texture(W_GetNumForName( "lfnum0") + str[c]-'0', RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 16);
+#endif
+		 StatusDrawPic (x, y, lifeptnums[str[c]-'0'], bufferofsonly); x+=6; break;
+         case 4:
+#ifdef RT_OPENGL
+	VGL_Bind_Texture(W_GetNumForName( "scnum0") + str[c]-'0', RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 16);
+#endif
+		 StatusDrawColoredPic (x, y, scorenums[str[c]-'0'], bufferofsonly, playeruniformcolor);   x+=8; break;
       }
       c++;
    }
@@ -1402,6 +1502,17 @@ void DrawKeys
       return;
       }
 
+#ifdef RT_OPENGL
+	int i;
+	int j;
+
+	for (i = 0, j = 1; i <  4; i++, j *= 2)
+		if (locplayerstate->keys & j) {
+			VGL_Bind_Texture(W_GetNumForName("key1")+i
+					, RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 16);
+			VGL_Draw2DTexture( KeyX[i], KEY_Y, keys[i]->width*4, keys[i]->height, 0.5f, 1.0f);
+		}
+#else
    if ( locplayerstate->keys & 1 )
       {
       GameMemToScreen( keys[ 0 ], KeyX[ 0 ], KEY_Y, bufferofsonly );
@@ -1421,6 +1532,7 @@ void DrawKeys
       {
       GameMemToScreen( keys[ 3 ], KeyX[ 3 ], KEY_Y, bufferofsonly );
       }
+#endif
    }
 
 
@@ -1439,8 +1551,13 @@ void StatusDrawTime
    )
 
    {
+#ifdef RT_OPENGL
+	   VGL_Bind_Texture(W_GetNumForName("tmnum0") + num, RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 16);
+	   VGL_Draw2DTexture(x, y, timenums[num]->width*4, timenums[num]->height, 0.5f, 1.0f);
+#else
 	DrawMPPic( x, y, timenums[ num ]->width, timenums[ num ]->height, 0,
       ( byte * )&timenums[ num ]->data, bufferofsonly );
+#endif
    }
 
 
@@ -1797,6 +1914,9 @@ void DrawTriads
 
 void DrawPPic (int xpos, int ypos, int width, int height, byte *src, int num, boolean up, boolean bufferofsonly)
 {
+#ifdef RT_OPENGL
+	STUB_FUNCTION;
+#else
    int olddest;
    int dest;
    int x;
@@ -1846,6 +1966,7 @@ void DrawPPic (int xpos, int ypos, int width, int height, byte *src, int num, bo
          dest += (linewidth-width*4);
       }
    }
+#endif
 }
 
 
@@ -1996,6 +2117,20 @@ void DrawBarAmmo
 
 void SingleDrawPPic (int xpos, int ypos, int width, int height, byte *src, int num, boolean up)
 {
+#ifdef RT_OPENGL
+	int amt;
+	int k;
+
+	assert(width*4 <= 32);
+
+	if (up)
+		amt = 8;
+	else
+		amt = -8;
+
+	for (k=0; k < num; k++)
+		VGL_Draw2DTexture(xpos + k*amt, ypos, width*4, height, (float) width*4 / 32.0f, 0.5f);
+#else
    byte *olddest;
    byte *dest;
    int x;
@@ -2038,6 +2173,7 @@ void SingleDrawPPic (int xpos, int ypos, int width, int height, byte *src, int n
          dest += (linewidth-width*4);
       }
    }
+#endif
 }
 
 
@@ -2099,16 +2235,25 @@ void DrawStats
 
    if ( oldpercenthealth < 4 )
       {
+#ifdef RT_OPENGL
+	VGL_Bind_Texture ( health_lump_offset + 3, RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 32);
+#endif
       SingleDrawPPic( iGLOBAL_HEALTH_X - 16, health_y, 8 >> 2, 16,
          ( byte * )&health[ 3 ]->data, oldpercenthealth, true);
       }
    else if ( oldpercenthealth < 5 )
       {
+#ifdef RT_OPENGL
+	VGL_Bind_Texture ( health_lump_offset + 4, RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 32);
+#endif
       SingleDrawPPic( iGLOBAL_HEALTH_X - 16, health_y, 8 >> 2, 16,
          ( byte * )&health[ 4 ]->data, oldpercenthealth, true );
       }
    else
       {
+#ifdef RTGL_OPENGL
+	VGL_Bind_Texture ( health_lump_offset + 5, RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 32);
+#endif
       SingleDrawPPic( iGLOBAL_HEALTH_X - 16, health_y, 8 >> 2, 16,
          ( byte * )&health[ 5 ]->data, oldpercenthealth, true );
       }
@@ -2121,18 +2266,27 @@ void DrawStats
          )
 
         {
+#ifdef RTGL_OPENGL
+	VGL_Bind_Texture ( ammo_lump_offset + 11, RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 32);
+#endif
          SingleDrawPPic( iGLOBAL_AMMO_X - 16, ammo_y, 24 >> 2, 16,
             ( byte * )&ammo[13]->data, 1, true );
          }
 #if (SHAREWARE == 0)
       else if ( locplayerstate->new_weapon == wp_dog )
          {
+#ifdef RTGL_OPENGL
+	VGL_Bind_Texture ( ammo_lump_offset + 21, RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 32);
+#endif
          SingleDrawPPic( iGLOBAL_AMMO_X - 16, ammo_y + 1, 24 >> 2, 16,
             ( byte * )&ammo[25]->data, 1, true );
          }
 #endif
       else
          {
+#ifdef RT_OPENGL
+	VGL_Bind_Texture ( ammo_lump_offset + 9 + locplayerstate->new_weapon, RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 32);
+#endif
          SingleDrawPPic( iGLOBAL_AMMO_X, ammo_y + 1, 8 >> 2, 16,
             ( byte * )&ammo[13 + locplayerstate->new_weapon]->data,
             locplayerstate->ammo, false );
@@ -2156,19 +2310,30 @@ void DrawPauseXY (int x, int y)
 
    if (GamePaused == true)
    {
+#ifdef RT_OPENGL
+	DrawXYPic(x, y, W_GetNumForName ("paused"));
+#else
       p = (pic_t *) W_CacheLumpNum (W_GetNumForName ("paused"), PU_CACHE, Cvt_pic_t, 1);
+      VWB_DrawPic (x, y, p);
+
 	  VL_MemToScreen ((byte *)&p->data, p->width, p->height,x, y);
 	  //VWB_DrawPic (x, y, p);
 	  bufferofs = buftmp;
+#endif
       DrawEpisodeLevel (x,y);
 	  //VL_MemToScreen ((byte *)&p->data, p->width, p->height,x, y);
 
    }
    else
    {
+#ifndef RT_OPENGL
       p = (pic_t *) W_CacheLumpNum (W_GetNumForName ("wait"), PU_CACHE, Cvt_pic_t, 1);
+
 	  VL_MemToScreen ((byte *)&p->data, p->width, p->height,x, y);
       //VWB_DrawPic (x, y, p);
+#else
+	  DrawXYPic(x, y, W_GetNumForName ("wait"));
+#endif
    }
    bufferofs = buftmp;
 }
@@ -2470,6 +2635,9 @@ void GM_UpdateBonus
 
 void Drawpic (int xpos, int ypos, int width, int height, byte *src)
 {
+#ifdef RT_OPENGL
+	STUB_FUNCTION;
+#else
    byte *olddest;
    byte *dest;
    int x;
@@ -2498,6 +2666,7 @@ void Drawpic (int xpos, int ypos, int width, int height, byte *src)
       }
       
    }
+#endif
 }
 
 
@@ -2591,6 +2760,10 @@ void  DrawEpisodeLevel (int x, int y)
 
 void GM_MemToScreen (byte *source, int width, int height, int x, int y)
 {
+#ifdef RT_OPENGL
+	STUB_FUNCTION;
+	return;
+#endif
    int dest;
    byte *dest1, *dest2, *dest3;
    byte *screen1, *screen2, *screen3;
@@ -3205,9 +3378,14 @@ void LevelCompleted
          MU_StartSong( song_endlevel );
          }
       }
-
+#ifdef RT_OPENGL
+	/* 585 */
+	VGL_Bind_Texture(W_GetNumForName("mmbk"), RTGL_TEXTURE_PIC | 512);
+	VGL_Draw2DTexture(0, 0, 320, 200, 320.0f / 512.0f, 200.0f / 512.0f);
+#else
    BkPic = ( pic_t * )W_CacheLumpName( "mmbk", PU_CACHE, Cvt_pic_t, 1 );
    VWB_DrawPic( 0, 0, BkPic );
+#endif
 
    CheckHolidays();
    CurrentFont = smallfont;
@@ -3477,8 +3655,13 @@ EndBonusSkip = true;
             ;
             }
 
+#ifdef RT_OPENGL
+	VGL_Bind_Texture(W_GetNumForName("mmbk"), RTGL_TEXTURE_PIC | 512);
+	VGL_Draw2DTexture(0, 0, 320, 200, 320.0f / 512.0f, 200.0f / 512.0f);
+#else
          BkPic = ( pic_t * )W_CacheLumpName( "mmbk", PU_CACHE, Cvt_pic_t, 1 );
          VWB_DrawPic( 0, 0, BkPic );
+#endif
 
          gamestate.score += BONUSBONUS;
          DrawEOLHeader( playstate );
@@ -3495,8 +3678,13 @@ EndBonusSkip = true;
             ;
             }
 
+#ifdef RT_OPENGL
+	VGL_Bind_Texture(W_GetNumForName("mmbk"), RTGL_TEXTURE_PIC | 512);
+	VGL_Draw2DTexture(0, 0, 320, 200, 320.0f / 512.0f, 200.0f / 512.0f);
+#else
          BkPic = ( pic_t * )W_CacheLumpName( "mmbk", PU_CACHE, Cvt_pic_t, 1 );
          VWB_DrawPic( 0, 0, BkPic );
+#endif
 
          DrawEOLHeader( playstate );
          EndBonusFirst = true;
@@ -4350,7 +4538,9 @@ player->yzangle=0;
       }
    else
       {
+#ifndef RT_OPENGL
       DrawFullSky();
+#endif
       FlipPage();
       }
 
@@ -4436,6 +4626,7 @@ player->yzangle=0;
 
       MU_StartSong(song_gameover);
 
+#ifndef RT_OPENGL
 #if (SHAREWARE==0)
       if (gamestate.violence==vl_excessive)
          LBM = (lbm_t *) W_CacheLumpNum (W_GetNumForName ("bootblod"), PU_CACHE, Cvt_lbm_t, 1);
@@ -4445,6 +4636,20 @@ player->yzangle=0;
       LBM = (lbm_t *) W_CacheLumpNum (W_GetNumForName ("bootblod"), PU_CACHE, Cvt_lbm_t, 1);
 #endif
       VL_DecompressLBM (LBM,true);
+#else
+#if (SHAREWARE==0)
+        if (gamestate.violence==vl_excessive)
+                VGL_Bind_Texture( W_GetNumForName("bootblod"), RTGL_TEXTURE_LBM | 512);
+        else
+                VGL_Bind_Texture( W_GetNumForName("bootnorm"), RTGL_TEXTURE_LBM | 512);
+#else
+        VGL_Bind_Texture( W_GetNumForName("bootblod"), RTGL_TEXTURE_LBM | 512);
+#endif
+	        VGL_Draw2DTexture(0, 0, 320, 200, 320.0f/512.0f, 200.0f/512.0f);
+        FlipPage();
+#endif
+
+
 
       StopWind();
 

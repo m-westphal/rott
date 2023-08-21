@@ -32,6 +32,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "rt_net.h" // for GamePaused
 #include "myprint.h"
 
+#ifdef RT_OPENGL
+#include <assert.h>
+#include "opengl/rt_gl_init.h"
+#include "opengl/rt_gl.h"
+#endif
+
 static void StretchMemPicture ();
 // GLOBAL VARIABLES
 
@@ -59,9 +65,13 @@ void DrawCenterAim ();
 
 #include "SDL.h"
 
+#ifndef STUB_FUNCTION
+
 /* rt_def.h isn't included, so I just put this here... */
 #ifndef STUB_FUNCTION
 #define STUB_FUNCTION fprintf(stderr,"STUB: %s at " __FILE__ ", line %d, thread %d\n",__FUNCTION__,__LINE__,getpid())
+#endif
+
 #endif
 
 /*
@@ -71,10 +81,14 @@ void DrawCenterAim ();
 =
 ====================
 */
+#ifndef RT_OPENGL
 static SDL_Surface *sdl_surface = NULL;
 static SDL_Surface *unstretch_sdl_surface = NULL;
+#endif
 
 static SDL_Window *screen;
+#ifndef RT_OPENGL
+static SDL_Surface *sdl_surface = NULL;
 static SDL_Renderer *renderer;
 static SDL_Surface *argbbuffer;
 static SDL_Texture *texture;
@@ -84,10 +98,15 @@ SDL_Surface *VL_GetVideoSurface (void)
 {
 	return sdl_surface;
 }
+#endif
 
 int VL_SaveBMP (const char *file)
 {
+#ifdef RT_OPENGL
+STUB_FUNCTION;
+#else
     return SDL_SaveBMP(sdl_surface, file);
+#endif
 }
 
 void SetShowCursor(int show)
@@ -96,6 +115,24 @@ void SetShowCursor(int show)
 	SDL_GetRelativeMouseState(NULL, NULL);
 }
 
+#ifdef RT_OPENGL
+void set_rt_gl_has_multisample(uint32_t flags) {
+	rtgl_has_multisample = 0;
+#ifdef FALSE
+// FIXME: SDL1 code incompatible with SDL2
+        /* check for multisample support */
+        for (rtgl_has_multisample = 16; sdl_surface == NULL && rtgl_has_multisample > 1;) {
+                SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+                SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, rtgl_has_multisample);
+                sdl_surface = SDL_SetVideoMode ( rtgl_screen_width, rtgl_screen_height, 8, flags );
+
+                if(sdl_surface == NULL)
+                        rtgl_has_multisample /= 2;
+        }
+#endif
+}
+#endif
+
 void GraphicsMode ( void )
 {
 	uint32_t flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
@@ -103,6 +140,10 @@ void GraphicsMode ( void )
 
 	unsigned int rmask, gmask, bmask, amask;
 	int bpp;
+
+#ifdef RT_OPENGL
+	flags |= SDL_WINDOW_OPENGL;
+#endif
 
 	if (SDL_InitSubSystem (SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
 	{
@@ -114,6 +155,16 @@ void GraphicsMode ( void )
 		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 	}
 
+#ifdef RT_OPENGL
+	rtgl_screen_width = iGLOBAL_SCREENWIDTH;
+	rtgl_screen_height = iGLOBAL_SCREENHEIGHT;
+	printf("rtgl_screen_* %d / %d\n", rtgl_screen_width, rtgl_screen_height);
+
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+#endif
+
 	screen = SDL_CreateWindow(NULL,
 	                          SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 	                          iGLOBAL_SCREENWIDTH, iGLOBAL_SCREENHEIGHT,
@@ -121,6 +172,7 @@ void GraphicsMode ( void )
 	SDL_SetWindowMinimumSize(screen, iGLOBAL_SCREENWIDTH, iGLOBAL_SCREENHEIGHT);
 	SDL_SetWindowTitle(screen, PACKAGE_STRING);
 
+#ifndef RT_OPENGL
 	renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_PRESENTVSYNC);
 	if (!renderer)
 	{
@@ -152,6 +204,42 @@ void GraphicsMode ( void )
 
 	blit_rect.w = iGLOBAL_SCREENWIDTH;
 	blit_rect.h = iGLOBAL_SCREENHEIGHT;
+#else
+	printf("RT_GL: OpenGL start\n");
+
+	SDL_GL_CreateContext(screen);
+	set_rt_gl_has_multisample(flags);
+
+	if( ! rtgl_SupportedCard() )
+		Error ("RT_GL: failed to initialize\n");
+
+        if(rtgl_has_multisample != 0)
+                rtglEnable(GL_MULTISAMPLE_ARB);
+
+        /* widescreen hud */
+        rtgl_hud_aspectratio = (float) rtgl_screen_width / (float) rtgl_screen_height;
+        if (rtgl_hud_aspectratio > 4.0f/3.0f)
+                rtgl_hud_aspectratio = 4.0f/3.0f;
+
+        rtglShadeModel( GL_SMOOTH );
+        rtglClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
+        rtglClearDepth( 128.0f );
+        rtglEnable( GL_NORMALIZE );
+        rtglEnable( GL_TEXTURE_2D );
+        rtglEnable( GL_CULL_FACE );
+        rtglBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+        rtglDepthFunc( GL_LEQUAL );
+        rtglAlphaFunc( GL_GREATER, 0.001f);
+        rtglHint( GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST );
+        rtglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+        rtglLightModeli( GL_LIGHT_MODEL_TWO_SIDE, 1);   //Backside = normal * -1 of frontside
+        rtglViewport( 0, 0, (GLsizei)rtgl_screen_width, (GLsizei)rtgl_screen_height );
+        VGL_InitHash();
+        VGL_Setup2DMode ();
+        rtglClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+        printf("RT_GL: OpenGL initialized\n");
+#endif
 
 	SetShowCursor(!sdl_fullscreen);
 }
@@ -181,11 +269,15 @@ void ToggleFullScreen (void)
 void SetTextMode ( void )
 {
 	if (SDL_WasInit(SDL_INIT_VIDEO) == SDL_INIT_VIDEO) {
+#ifndef RT_OPENGL
 		if (sdl_surface != NULL) {
 			SDL_FreeSurface(sdl_surface);
 	
 			sdl_surface = NULL;
 		}
+#else
+		VGL_DestroyHash();
+#endif
 		
 		SDL_QuitSubSystem (SDL_INIT_VIDEO);
 	}
@@ -224,6 +316,9 @@ void WaitVBL( void )
 
 void VL_SetVGAPlaneMode ( void )
 {
+#ifdef RT_OPENGL
+    GraphicsMode();
+#else
    int i,offset;
 
     GraphicsMode();
@@ -264,6 +359,7 @@ void VL_SetVGAPlaneMode ( void )
     // start stretched
     EnableScreenStretch();
     XFlipPage ();
+#endif
 }
 
 /*
@@ -275,7 +371,11 @@ void VL_SetVGAPlaneMode ( void )
 */
 void VL_CopyPlanarPage ( byte * src, byte * dest )
 {
+#ifdef RT_OPENGL
+	STUB_FUNCTION;
+#else
       memcpy(dest,src,screensize);
+#endif
 }
 
 /*
@@ -287,7 +387,11 @@ void VL_CopyPlanarPage ( byte * src, byte * dest )
 */
 void VL_CopyPlanarPageToMemory ( byte * src, byte * dest )
 {
+#ifdef RT_OPENGL
+	STUB_FUNCTION;
+#else
       memcpy(dest,src,screensize);
+#endif
 }
 
 /*
@@ -325,7 +429,17 @@ void VL_CopyDisplayToHidden ( void )
 
 void VL_ClearBuffer (byte *buf, byte color)
 {
+#ifdef RT_OPENGL
+	extern rtgl_pal rtgl_palette[256];
+	rtglPushAttrib( GL_COLOR_BUFFER_BIT );
+	rtglClearColor( (GLfloat) rtgl_palette[color].r / 255.0f,
+			(GLfloat) rtgl_palette[color].g / 255.0f,
+			(GLfloat) rtgl_palette[color].b / 255.0f, 0);
+	rtglClear (GL_COLOR_BUFFER_BIT);
+	rtglPopAttrib();
+#else
   memset((byte *)buf,color,screensize);
+#endif
 }
 
 /*
@@ -340,7 +454,11 @@ void VL_ClearBuffer (byte *buf, byte color)
 
 void VL_ClearVideo (byte color)
 {
+#ifdef RT_OPENGL
+	VL_ClearBuffer(0, color);
+#else
   memset (sdl_surface->pixels, color, iGLOBAL_SCREENWIDTH*iGLOBAL_SCREENHEIGHT);
+#endif
 }
 
 /*
@@ -361,6 +479,9 @@ void VL_DePlaneVGA (void)
 void VH_UpdateScreen (void)
 { 	
 
+#ifdef RT_OPENGL
+	XFlipPage();
+#else
 	if (StretchScreen){//bna++
 		StretchMemPicture ();
 	}else{
@@ -371,6 +492,7 @@ void VH_UpdateScreen (void)
 	SDL_RenderClear(renderer);
 	SDL_RenderCopy(renderer, texture, NULL, NULL);
 	SDL_RenderPresent(renderer);
+#endif
 }
 
 
@@ -384,6 +506,10 @@ void VH_UpdateScreen (void)
 
 void XFlipPage ( void )
 {
+#ifdef RT_OPENGL
+	SDL_GL_SwapWindow(screen);
+#else
+
  	if (StretchScreen){//bna++
 		StretchMemPicture ();
 	}else{
@@ -394,10 +520,12 @@ void XFlipPage ( void )
    SDL_RenderClear(renderer);
    SDL_RenderCopy(renderer, texture, NULL, NULL);
    SDL_RenderPresent(renderer);
+#endif
 }
 
 void EnableScreenStretch(void)
 {
+#ifndef RT_OPENGL
    if (iGLOBAL_SCREENWIDTH <= 320 || StretchScreen) return;
    
    if (unstretch_sdl_surface == NULL)
@@ -415,10 +543,12 @@ void EnableScreenStretch(void)
    page2start = unstretch_sdl_surface->pixels;
    page3start = unstretch_sdl_surface->pixels;
    StretchScreen = 1;	
+#endif
 }
 
 void DisableScreenStretch(void)
 {
+#ifndef RT_OPENGL
    if (iGLOBAL_SCREENWIDTH <= 320 || !StretchScreen) return;
 	
    displayofs = sdl_surface->pixels +
@@ -428,12 +558,14 @@ void DisableScreenStretch(void)
    page2start = sdl_surface->pixels;
    page3start = sdl_surface->pixels;
    StretchScreen = 0;
+#endif
 }
 
 
 // bna section -------------------------------------------
 static void StretchMemPicture ()
 {
+#ifndef RT_OPENGL
   SDL_Rect src;
   SDL_Rect dest;
 	
@@ -447,6 +579,7 @@ static void StretchMemPicture ()
   dest.w = iGLOBAL_SCREENWIDTH;
   dest.h = iGLOBAL_SCREENHEIGHT;
   SDL_SoftStretch(unstretch_sdl_surface, &src, sdl_surface, &dest);
+#endif
 }
 
 // bna function added start

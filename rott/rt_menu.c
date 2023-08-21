@@ -74,6 +74,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "develop.h"
 #include "m_misc2.h"
 
+#ifdef RT_OPENGL
+#include "opengl/rt_gl.h"
+#include <assert.h>
+#endif
 
 //******************************************************************************
 //
@@ -114,7 +118,9 @@ int py;
 int bufferheight;
 int bufferwidth;
 
+#ifndef RT_OPENGL
 cfont_t *IFont;
+#endif
 font_t  *CurrentFont;
 font_t  *newfont1;
 font_t  *smallfont;
@@ -1466,6 +1472,21 @@ void ScanForSavedGames ()
 
 void SetUpControlPanel (void)
 {
+#ifdef RT_OPENGL
+   savedscreen = SafeMalloc (16000);
+   if (RefreshPause==false)
+      {
+      GamePaused=false;
+      ThreeDRefresh();
+      FlipPage();
+      FlipPage();
+      GamePaused=true;
+      }
+
+   //MISSING MODEM STUFF FIXME
+
+   ScanForSavedGames ();
+#else
    int i;
    int j;
    byte * b;
@@ -1539,7 +1560,8 @@ void SetUpControlPanel (void)
          MainMenu[battlemode].routine = ( void (*)(int) )BattleGamePlayerSetup;
          }
       }
-   }
+#endif
+}
 
 //******************************************************************************
 //
@@ -2996,6 +3018,10 @@ void CP_NewGame
 
    {
    int which;
+#ifdef RT_OPENGL
+rtglClear(GL_COLOR_BUFFER_BIT);
+#endif
+
 
 #if ( SHAREWARE == 1 )
    ToughMenuNum = 0;
@@ -4789,6 +4815,9 @@ void DisplayInfo (int which)
 
    x = (288 - p->width) >> 1;
 
+#ifdef RT_OPENGL
+   EraseMenuBufRegion (x, 149, p->width, p->height);
+#endif
    DrawMenuBufItem (x, 149, num);
 }
 
@@ -5727,6 +5756,9 @@ boolean SliderMenu
          moved = false;
 
          EraseMenuBufRegion( erasex, erasey, erasew, eraseh );
+#ifdef RT_OPENGL
+	 DrawSTMenuBuf( erasex - 1, erasey - 1, erasew + 1, eraseh + 1, false );
+#endif
 
          DrawMenuBufItem( blkx + ( ( ( ( *number - lowerbound ) *
             scale ) / range ) >> 16 ), erasey, block );

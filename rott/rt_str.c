@@ -51,6 +51,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "rt_sound.h"
 #include "myprint.h"
 
+#ifdef RT_OPENGL
+#include "opengl/rt_gl.h"
+#endif
 
 //******************************************************************************
 //
@@ -81,6 +84,55 @@ static char strbuf[MaxString];
 
 void VW_DrawClippedString (int x, int y, const char *string)
 {
+#ifdef RT_OPENGL
+	//FIXME ...
+	float	height = (float) CurrentFont->height;
+	int	cs;
+	unsigned char ch;
+
+	if (CurrentFont == tinyfont) {
+		VGL_Bind_Texture(W_GetNumForName ("tinyfont"), RTGL_TEXTURE_FONT | RTGL_FILTER_RGBA | 8);
+		cs = 8;
+	}
+	else if (CurrentFont == (font_t*) W_CacheLumpName ("newfnt1", PU_STATIC, Cvt_font_t, 1)) {
+		VGL_Bind_Texture(W_GetNumForName ("newfnt1"), RTGL_TEXTURE_FONT | RTGL_FILTER_RGBA | 16);
+		cs = 16;
+//		for (i = 0; i < 31; i++)
+//			printf("%d ", CurrentFont->width[i]);
+//		CurrentFont = (font_t *)W_CacheLumpName ("newfnt1", PU_STATIC, Cvt_font_t, 1);
+//		printf("newfnt1\n");
+	}
+	else if (CurrentFont == (font_t*) W_CacheLumpName ("smallfont", PU_STATIC, Cvt_font_t, 1)) {
+		VGL_Bind_Texture(W_GetNumForName ("smallfont"), RTGL_TEXTURE_FONT | RTGL_FILTER_RGBA | 16);
+		cs = 16;
+	}
+	else {
+   // ?CurrentFont=oldfont;
+		printf("rt_str.c: Unsupported Font\n");
+		return;
+	}
+
+	while ((ch = (unsigned char)*string++) != 0) {
+		ch -= 31;
+
+		float width = (float) CurrentFont->width[ (unsigned int) ch ];
+
+		float texx = ( (float) (ch % cs) * cs) / ( (float) cs*16);
+		float texx_f = ( (float) (ch % cs) * cs + width) / ( (float) cs*16);
+		float texy = ( (float) (ch / cs) * cs) / ( (float) cs*16);
+		float texy_f = ( (float) (ch / cs) * cs + height) / ( (float) cs*16);
+
+		GLfloat char_triangle_fan[20] = {	texx, texy_f, x, - y - height, 0,
+							texx_f, texy_f, x+width, - y - height, 0,
+							texx_f, texy, x+width, - y, 0,
+							texx, texy , x, - y, 0};
+
+		rtglInterleavedArrays( GL_T2F_V3F, 0, char_triangle_fan);
+		rtglDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+		x += width;
+	}
+#else
    int   width,height,ht;
    byte  *source;
    int   ch;
@@ -116,6 +168,7 @@ void VW_DrawClippedString (int x, int y, const char *string)
          x++;
          }
       }
+#endif
 }
 
 //******************************************************************************
@@ -163,6 +216,15 @@ void US_ClippedPrint (int x, int y, const char *string)
 
 void VW_DrawPropString (const char *string)
 {
+#ifdef RT_OPENGL
+	int ch;
+
+        VW_DrawClippedString (px, py, string);
+
+        //fix px
+        while ((ch = *string++)!=0)
+                px += CurrentFont->width[ch - 31];
+#else
    byte  pix;
    int   width,step,height,ht;
    byte  *source, *dest, *origdest;
@@ -196,6 +258,7 @@ void VW_DrawPropString (const char *string)
    }
    bufferheight = ht;
    bufferwidth = ((dest+1)-origdest);
+#endif
 }
 
 
@@ -1339,7 +1402,7 @@ void US_DrawWindow (int x, int y, int w, int h)
 
    US_ClearWindow ();
 
-
+#ifndef RT_OPENGL
    VWB_DrawPic (sx, sy, Win1);
 
    VWB_DrawPic (sx, sy + sh, Win7);
@@ -1358,6 +1421,26 @@ void US_DrawWindow (int x, int y, int w, int h)
       VWB_DrawPic (sx, i, Win4);
       VWB_DrawPic (sx + sw, i, Win6);
    }
+#else
+  DrawXYPic(sx, sy, W_GetNumForName ("window1"));
+
+  DrawXYPic (sx, sy + sh, W_GetNumForName ("window7"));
+
+   for (i = sx + 8;i <= sx + sw - 8; i += 8)
+   {
+      DrawXYPic (i, sy, W_GetNumForName ("window2"));
+      DrawXYPic (i, sy + sh, W_GetNumForName ("window8"));
+   }
+
+   DrawXYPic (i, sy, W_GetNumForName ("window3"));
+   DrawXYPic (i, sy + sh, W_GetNumForName ("window9"));
+
+   for (i = sy + 8;i <= sy + sh - 8; i += 8)
+   {
+      DrawXYPic (sx, i, W_GetNumForName ("window4"));
+      DrawXYPic (sx + sw, i, W_GetNumForName ("window6"));
+   }
+#endif
 }
 
 
@@ -1413,7 +1496,37 @@ byte GetIntensityColor (byte pix)
 
 void DrawIntensityChar  ( char ch )
    {
+#ifdef RT_OPENGL
+	ch -= 31;
+	float height = (float) IFont->height;
+	float width = (float) IFont->width[ (unsigned int) ch ];
 
+	//FIXME Different Fonts! IFont
+	VGL_Bind_Texture( W_GetNumForName ("ifnt"), RTGL_TEXTURE_CFONT | 16);
+
+
+	float texx = ( (float) (ch % 16) * 16) / 256.0f;
+	float texx_f = ( (float) (ch % 16) * 16 + width) / 256.0f;
+	float texy = ( (float) (ch / 16) * 16) / 256.0f;
+	float texy_f = ( (float) (ch / 16) * 16 + height) / 256.0f;
+
+
+	float r = ( (float) rtgl_palette[ GetIntensityColor(2) ].r )/ 255.0f;
+	float g = ( (float) rtgl_palette[ GetIntensityColor(2) ].g )/ 255.0f;
+	float b = ( (float) rtgl_palette[ GetIntensityColor(2) ].b ) / 255.0f;
+
+	rtglColor3f( r, g, b );
+
+	GLfloat char_triangle_fan[20] = {       texx, texy_f, px, - py - height, 0,
+						texx_f, texy_f, px+width, - py - height, 0,
+						texx_f, texy, px+width, - py, 0,
+						texx, texy , px, - py, 0 };
+
+	rtglInterleavedArrays( GL_T2F_V3F, 0, char_triangle_fan);
+	rtglDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+	px += width;
+#else
    byte  pix;
    int   width;
    int   height;
@@ -1479,6 +1592,7 @@ void DrawIntensityChar  ( char ch )
 
 	}
 
+#endif
 }
 
 
@@ -1517,6 +1631,7 @@ void DrawIString (unsigned short int x, unsigned short int y, const char *string
 
    px = x;
    py = y;
+
 
    while ((ch = *string++) != 0)
    {
@@ -1600,6 +1715,10 @@ void DrawIString (unsigned short int x, unsigned short int y, const char *string
       highlight = false;
       fontcolor = oldfontcolor;
    }
+#ifdef RT_OPENGL
+	//fix color
+	rtglColor3f( 1.0f, 1.0f, 1.0f );
+#endif
 }
 
 
@@ -1622,4 +1741,8 @@ void DrawIntensityString (unsigned short int x, unsigned short int y, const char
       {
       DrawIntensityChar (ch);
       }
+#ifdef RT_OPENGL
+	//fix color
+	rtglColor3f( 1.0f, 1.0f, 1.0f );
+#endif
 }

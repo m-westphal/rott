@@ -41,6 +41,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cin_efct.h"
 #include "w_wad.h"
 
+#ifdef RT_OPENGL
+#include <assert.h>
+#include "opengl/rt_gl.h"
+#endif
+
 
 //******************************************************************************
 //
@@ -64,6 +69,10 @@ boolean  screenfaded;
 
 void VL_MemToScreen (byte *source, int width, int height, int x, int y)
 {
+#ifdef RT_OPENGL
+	STUB_FUNCTION;
+	return;
+#endif
 	/* TODO please optimize me */
 	
 	byte *ptr, *destline;
@@ -154,6 +163,9 @@ void DrawTiledRegion
    )
 
    {
+#ifdef RT_OPENGL
+	   STUB_FUNCTION; return;
+#endif
    byte  *source;
    byte  *sourceoff;
    int    sourcex;
@@ -238,9 +250,13 @@ void DrawTiledRegion
 
 void VWB_DrawPic (int x, int y, pic_t *pic)
 {
+#ifdef RT_OPENGL
+	STUB_FUNCTION;
+#else
    if (((iGLOBAL_SCREENWIDTH > 320) && !StretchScreen) ||
        VW_MarkUpdateBlock (x, y, x+(pic->width<<2)-1, y+(pic->height)-1))
       VL_MemToScreen ((byte *)&pic->data, pic->width, pic->height, x, y);
+#endif
 }
 
 
@@ -253,6 +269,9 @@ void VWB_DrawPic (int x, int y, pic_t *pic)
 
 void VL_Bar (int x, int y, int width, int height, int color)
 {
+#ifdef RT_OPENGL
+	STUB_FUNCTION;
+#else
 	byte *dest = (byte *)(bufferofs+ylookup[y]+x);
 	
 	while (height--) {
@@ -260,6 +279,7 @@ void VL_Bar (int x, int y, int width, int height, int color)
 		
 		dest += linewidth;
 	}
+#endif
 }
 
 
@@ -286,6 +306,23 @@ void VWB_Bar (int x, int y, int width, int height, int color)
 
 void VL_TBar (int x, int y, int width, int height)
 {
+#ifdef RT_OPENGL
+	//transparent bar
+
+        rtglDisable(GL_TEXTURE_2D);
+
+        rtglColor4f(0.0f, 0.0f, 0.0f, 0.75f);
+
+        float coords[12] = {    x, -y, 0,
+                                x, -y - height, 0,
+                                x+width, -y - height, 0,
+                                x+width, -y, 0 };
+        rtglInterleavedArrays(GL_V3F, 0, coords);
+        rtglDrawArrays(GL_QUADS, 0, 4);
+
+        rtglColor4f(1,1,1,1);
+        rtglEnable(GL_TEXTURE_2D);
+#else
 	int w = width;
 	
 	while (height--) {
@@ -305,6 +342,7 @@ void VL_TBar (int x, int y, int width, int height)
 		
 		y++;
 	}
+#endif
 }
 
 
@@ -564,6 +602,9 @@ void VW_UpdateScreen (void)
 
 void VL_FadeOut (int start, int end, int red, int green, int blue, int steps)
 {
+#ifdef RT_OPENGL
+	STUB_FUNCTION;
+#else
    int      i,j,orig,delta;
    byte  *origptr, *newptr;
 
@@ -608,6 +649,7 @@ void VL_FadeOut (int start, int end, int red, int green, int blue, int steps)
    VH_UpdateScreen();
 
    screenfaded = true;
+#endif
 }
 
 
@@ -623,6 +665,9 @@ void VL_FadeOut (int start, int end, int red, int green, int blue, int steps)
 
 void VL_FadeToColor (int time, int red, int green, int blue)
 {
+#ifdef RT_OPENGL
+	STUB_FUNCTION;
+#else
    int      i,j,orig,delta;
    byte  *origptr, *newptr;
    int dmax,dmin;
@@ -675,6 +720,7 @@ void VL_FadeToColor (int time, int red, int green, int blue)
    VH_UpdateScreen();
 
    screenfaded = true;
+#endif
 }
 
 
@@ -690,6 +736,9 @@ void VL_FadeToColor (int time, int red, int green, int blue)
 
 void VL_FadeIn (int start, int end, byte *palette, int steps)
 {
+#ifdef RT_OPENGL
+	VL_SetPalette (palette);
+#else
    int      i,j,delta;
 
    VH_UpdateScreen();
@@ -724,6 +773,7 @@ void VL_FadeIn (int start, int end, byte *palette, int steps)
    VH_UpdateScreen();
 
    screenfaded = false;
+#endif
 }
 
 
@@ -758,6 +808,7 @@ void SwitchPalette (byte * newpal, int steps)
 //
 //****************************************************************************
 
+#ifndef RT_OPENGL
 void VL_DecompressLBM (lbm_t *lbminfo, boolean flip)
 {
    int  count;
@@ -816,6 +867,7 @@ void VL_DecompressLBM (lbm_t *lbminfo, boolean flip)
    VL_FadeIn (0, 255, &pal[0], 15);
 
 }
+#endif
 
 //****************************************************************************
 //
@@ -825,6 +877,10 @@ void VL_DecompressLBM (lbm_t *lbminfo, boolean flip)
 
 void SetBorderColor (int color)
 {
+#ifdef RT_OPENGL
+	STUB_FUNCTION;
+	return;
+#endif
    // bna section start
 
    byte  *cnt,*Ycnt,*b;
@@ -892,6 +948,22 @@ void VL_DrawPostPic (int lumpnum)
 
 void VL_DrawLine (int x1, int y1, int x2, int y2, byte color)
 {
+#ifdef RT_OPENGL
+	extern rtgl_pal rtgl_palette[256];
+
+	rtglDisable(GL_TEXTURE_2D);
+//	rtglLineWidth(1);
+//	printf("%d, %d, %d, %d, %d\n", x1, x2, y1,y2,x2,color);
+	rtglColor3f( ((float) rtgl_palette[color].r) / 255.0f, ((float) rtgl_palette[color].g) / 255.0f, ((float) rtgl_palette[color].b) /255.0f );
+
+	rtglBegin(GL_LINES);
+	rtglVertex3f(x1, - y1, 0);
+	rtglVertex3f(x2, - y2, 0);
+	rtglEnd();
+
+	rtglColor3f(1,1,1);
+	rtglEnable(GL_TEXTURE_2D);
+#else
    int dx;
    int dy;
    int xinc;
@@ -937,6 +1009,7 @@ void VL_DrawLine (int x1, int y1, int x2, int y2, byte color)
       y1+=yinc;
       count--;
       }
+#endif
 }
 
 
@@ -948,6 +1021,16 @@ void VL_DrawLine (int x1, int y1, int x2, int y2, byte color)
 
 void DrawXYPic (int x, int y, int shapenum)
 {
+#ifdef RT_OPENGL
+	pic_t* pic = (pic_t*) W_CacheLumpNum ( shapenum, PU_CACHE, Cvt_pic_t, 1);
+
+	VGL_Bind_Texture(shapenum, RTGL_TEXTURE_PIC | 512);
+
+	//FIXME strange vals (text rot 90 deg)
+
+	assert(pic->width*4 <= 512);
+	VGL_Draw2DTexture(x, y, pic->width*4, pic->height, (float) pic->width*4 / 512.0f, (float) pic->height / 512.0f);
+#else
    byte *buffer;
    byte *buf;
    int xx,yy;
@@ -976,4 +1059,5 @@ void DrawXYPic (int x, int y, int shapenum)
             *(buf+plane+xx*4)=*(src++);
          }
       }
+#endif
 }

@@ -191,12 +191,16 @@ void GrabCinematicScript (char const *basename, boolean uselumpy)
 void GetCinematicTics ( void )
 {
    int time;
-
    time=GetCinematicTime();
+
    while (time==cinematictictime)
       {
       time=GetCinematicTime();
+#ifndef DOS
+      I_Delay(10);
+#endif
       }
+
    cinematictics=(time-cinematictictime);
    cinematictictime=time;
    cinematictics=profiletics;
@@ -242,6 +246,9 @@ int cin_yl;
 
 void R_DrawFilmColumn (byte * buf)
 {
+#ifdef RT_OPENGL
+	STUB_FUNCTION; return;
+#endif
 	// This is *NOT* 100% correct - DDOI
 	int count;
 	int frac, fracstep;
@@ -264,7 +271,10 @@ void R_DrawFilmColumn (byte * buf)
 
 void DrawFilmPost (byte * buf, byte * src, int height)
 {
-	while (height--) { 
+#ifdef RT_OPENGL
+	STUB_FUNCTION; return;
+#endif
+	while (height--) {
 		*buf = *src;
 		
 		src++;

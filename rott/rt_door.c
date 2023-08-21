@@ -43,6 +43,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef RT_OPENGL
+#include "opengl/rt_gl.h"
+#endif
+
 /*=============================================================================
 
 							DOORS
@@ -3713,11 +3717,17 @@ void WallMoving (int pwall)
 			{
          if (W_CheckNumForName("imfree")>=0)
             {
+#ifndef RT_OPENGL
             lbm_t *LBM;
 
             LBM = (lbm_t *) W_CacheLumpNum (W_GetNumForName ("imfree"), PU_CACHE, Cvt_lbm_t, 1);
             VL_DecompressLBM (LBM,true);
             VW_UpdateScreen ();
+#else
+		VGL_Bind_Texture( W_GetNumForName("imfree"), RTGL_TEXTURE_LBM | 512);
+		VGL_Draw2DTexture(0, 0, 320, 200, 320.0f/512.0f, 200.0f/512.0f);
+		FlipPage();
+#endif
             I_Delay (2000);
             }
 			Error ("PushWall Attempting to escape off the edge of the map\nIt is located at x=%d y=%d\nI'm Free!!!!\n",

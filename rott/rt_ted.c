@@ -980,10 +980,13 @@ void DrawPreCache( void )
          }
       else
          {
+#ifdef RT_OPENGL
+	DrawXYPic(0,0, (pic_t*) W_GetNumForName("mmbk"));
+#else
          pic_t * pic;
          pic=(pic_t *)W_CacheLumpName("mmbk",PU_CACHE, Cvt_pic_t, 1);
          VWB_DrawPic (0, 0, pic);
-
+#endif
          CheckHolidays();
          }
 
@@ -5042,12 +5045,15 @@ void SetupGameLevel (void)
 		FixMaskedWallAreaNumbers();
 		SetupWindows();
 		SetupLights();
-      SetupInanimateActors();
+		SetupInanimateActors();
       }
    else {
       FixTiles();
    }
-   
+#ifdef RT_OPENGL
+	VGL_SetupLevel(levelheight, MAPSPOT(0,0,0)-179, MAPSPOT(1,0,0), baseminshade, basemaxshade, fog, darknesslevel);
+#endif
+
 	if (gamestate.SpawnEluder || gamestate.SpawnDeluder)
       {
 //MED
