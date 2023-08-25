@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <assert.h>
 
 #include "rt_def.h"
 #include "watcom.h"
@@ -862,6 +863,8 @@ void MissileAutoTarget(objtype *ob,missile_stats *mdata)
        xydist,dz,yzangle,oldyzangle,saveyzangle;
    objtype *target,*temp;
 
+   saveangle = 0; // variable might be used uninitialized
+   saveyzangle = 0; // variable might be used uninitialized
    mindist = 0x7fffffff;
    target = NULL;
    for(temp = firstactive;temp;temp=temp->nextactive)
@@ -909,8 +912,6 @@ void MissileAutoTarget(objtype *ob,missile_stats *mdata)
 
    else if (ob->flags&FL_GODMODE)
       {
-      int saveangle;
-
       saveangle=ob->yzangle;
       ob->yzangle -= GODYZANGLE;
       Fix(ob->yzangle);
@@ -1427,6 +1428,8 @@ void  GunAttack (objtype *ob)
 
  switch (pstate->weapon)
 	{
+	default:
+		assert(false); // cases should be exhaustive
 	case wp_pistol:
 		SD_PlaySoundRTP(SD_ATKPISTOLSND,ob->x,ob->y);
 		damage=DMG_PISTOL;
