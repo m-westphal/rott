@@ -494,8 +494,12 @@ void CheckCommandLineParameters( void )
       printf ("   FULLSCREEN - Start in fullscreen mode\n");
       printf ("   WINDOW     - Start in windowed mode\n");
       printf ("   RESOLUTION - Specify the screen resolution to use\n");
+#ifdef RT_OPENGL
+      printf ("              - next param is <widthxheight>\n");
+#else
       printf ("              - next param is <widthxheight>, valid resolutions are:\n");
       printf ("              - 320x200 and 640x480\n");
+#endif
 #if (SHAREWARE==0)
       printf ("   FILERTL    - used to load Userlevels (RTL files)\n");
       printf ("              - next parameter is RTL filename\n");
@@ -743,12 +747,24 @@ void SetupWads( void )
             {
                int width, height;
                if ( (sscanf(_argv[i], "%dx%d", &width, &height) == 2) &&
+#ifndef RT_OPENGL
                     ( ( (width == 320) && (height == 200) ) ||
                       ( (width == 640) && (height == 480) ) ) )
                {
                  iGLOBAL_SCREENWIDTH  = width;
                  iGLOBAL_SCREENHEIGHT = height;
                }
+#else
+                    true)
+               {
+                    // opengl assumes internal 320 x 200 coordinate system
+                    // instead use rtgl_screen_* for real resolution
+                    rtgl_screen_width = width;
+                    rtgl_screen_height = height;
+                    iGLOBAL_SCREENWIDTH = 320;
+                    iGLOBAL_SCREENHEIGHT = 200;
+               }
+#endif
                else
                   printf("Invalid resolution parameter: %s\n", _argv[i]);
             }

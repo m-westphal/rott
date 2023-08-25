@@ -156,12 +156,6 @@ void GraphicsMode ( void )
 	}
 
 #ifdef RT_OPENGL
-	// opengl "2d mode" assumes internal 320 x 200 coordinate system
-	// reset iGLOBAL; use rtgl_screen_* dimensions instead
-	iGLOBAL_SCREENWIDTH = 320;
-	iGLOBAL_SCREENHEIGHT = 200;
-	rtgl_screen_width = 800;
-	rtgl_screen_height = 600;
 	printf("rtgl_screen_* %d / %d\n", rtgl_screen_width, rtgl_screen_height);
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
@@ -172,7 +166,7 @@ void GraphicsMode ( void )
 	                          SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 	                          rtgl_screen_width, rtgl_screen_height,
 	                          flags);
-	SDL_SetWindowMinimumSize(screen, iGLOBAL_SCREENWIDTH, iGLOBAL_SCREENHEIGHT);
+	SDL_SetWindowMinimumSize(screen, rtgl_screen_width, rtgl_screen_height);
 #else
 	screen = SDL_CreateWindow(NULL,
 	                          SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
