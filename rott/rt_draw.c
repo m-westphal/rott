@@ -2751,12 +2751,16 @@ void      ThreeDRefresh (void)
 	rtglNormal3f(0, 0, 1.0f);
 
 	//printf("min/max, base min/max: %d/%d, %d/%d\n", minshade, maxshade, baseminshade, basemaxshade);
+	assert(maxshade > 0);
+	assert(minshade < 32);
 	assert(basemaxshade > 0);
 	assert(basemaxshade < 32);
 
 	//calc light
-	GLfloat val = 1 - (float) maxshade / ((float) basemaxshade * 16.0f);
-
+        const float maxquot = (float) basemaxshade / (float) maxshade;
+        const GLfloat val = fmax(0.0f,
+                                 fmin(1.0f,
+                                      0.25f + 2.0f * (maxquot - 1.0f)));
 	//if (val != 0.0f) printf ("%f\n", val);
 
 	assert(val >= 0);
@@ -2764,7 +2768,7 @@ void      ThreeDRefresh (void)
 	{
 		GLfloat spec[4] = { val, val, val, 1.0f};
 		rtglLightfv(GL_LIGHT1, GL_AMBIENT, spec);
-		rtglLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 1.0f);
+		rtglLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.0f);
 	}
 #endif
 
