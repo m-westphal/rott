@@ -1691,6 +1691,9 @@ void DrawTime
 
 void DrawMPPic (int xpos, int ypos, int width, int height, int heightmod, byte *src, boolean bufferofsonly)
 {
+#ifdef RT_OPENGL
+   STUB_FUNCTION;
+#else
    int olddest;
    int dest;
    int x;
@@ -1733,6 +1736,7 @@ void DrawMPPic (int xpos, int ypos, int width, int height, int heightmod, byte *
       if (heightmod)
          src += (heightmod*width);
    }
+#endif
 }
 
 
@@ -1757,6 +1761,9 @@ void DrawMPPic (int xpos, int ypos, int width, int height, int heightmod, byte *
 
 void DrawColoredMPPic (int xpos, int ypos, int width, int height, int heightmod, byte *src, boolean bufferofsonly, int color)
 {
+#ifdef RT_OPENGL
+   STUB_FUNCTION;
+#else
    int olddest;
    int dest;
    int x;
@@ -1804,6 +1811,7 @@ void DrawColoredMPPic (int xpos, int ypos, int width, int height, int heightmod,
       if (heightmod)
          src += (heightmod*width);
    }
+#endif
 }
 
 
