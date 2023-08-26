@@ -1965,10 +1965,15 @@ void TransformDoors( void )
            {
            gx=(doorobjlist[i]->tilex<<16);
            gy=(doorobjlist[i]->tiley<<16)+0x8000;
+#ifndef RT_OPENGL
            if (viewy<gy)
               result=TransformPlane(gx+0xffff,gy,gx,gy,doorptr);
            else
               result=TransformPlane(gx,gy,gx+0xffff,gy,doorptr);
+#else
+	rtglNormal3f(-1,0,0);
+	VGL_DrawDoor_Horizontal(doorobjlist[i]->tilex*65536, doorobjlist[i]->tiley*65536, doorobjlist[i]->texture, doorobjlist[i]->alttexture, doorobjlist[i]->basetexture);
+#endif
            }
 #ifndef RT_OPENGL
         if (result==true)
