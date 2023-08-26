@@ -2251,7 +2251,7 @@ void DrawStats
       }
    else
       {
-#ifdef RTGL_OPENGL
+#ifdef RT_OPENGL
 	VGL_Bind_Texture ( health_lump_offset + 5, RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 32);
 #endif
       SingleDrawPPic( iGLOBAL_HEALTH_X - 16, health_y, 8 >> 2, 16,
@@ -2266,7 +2266,7 @@ void DrawStats
          )
 
         {
-#ifdef RTGL_OPENGL
+#ifdef RT_OPENGL
 	VGL_Bind_Texture ( ammo_lump_offset + 11, RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 32);
 #endif
          SingleDrawPPic( iGLOBAL_AMMO_X - 16, ammo_y, 24 >> 2, 16,
@@ -2275,7 +2275,7 @@ void DrawStats
 #if (SHAREWARE == 0)
       else if ( locplayerstate->new_weapon == wp_dog )
          {
-#ifdef RTGL_OPENGL
+#ifdef RT_OPENGL
 	VGL_Bind_Texture ( ammo_lump_offset + 21, RTGL_TEXTURE_PIC_TRANS | RTGL_FILTER_RGBA | 32);
 #endif
          SingleDrawPPic( iGLOBAL_AMMO_X - 16, ammo_y + 1, 24 >> 2, 16,

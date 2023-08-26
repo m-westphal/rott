@@ -3995,7 +3995,7 @@ void DoEndCinematic ( void )
 fadelogo:
    MenuFadeOut();
    ClearGraphicsScreen();
-#ifndef RTGL_OPENGL
+#ifndef RT_OPENGL
    memcpy(&pal[0],W_CacheLumpName("ap_pal",PU_CACHE,CvtNull,1),768);
    VL_NormalizePalette(&pal[0]);
    SwitchPalette(&pal[0],35);
