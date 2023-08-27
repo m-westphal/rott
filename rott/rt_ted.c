@@ -60,6 +60,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "rt_net.h"
 
 
+#ifdef RT_OPENGL
+#include "opengl/rt_gl.h"
+#endif
 
 
 //========================================
@@ -981,7 +984,7 @@ void DrawPreCache( void )
       else
          {
 #ifdef RT_OPENGL
-	DrawXYPic(0,0, (pic_t*) W_GetNumForName("mmbk"));
+	DrawXYPic(0,0, W_GetNumForName("mmbk"));
 #else
          pic_t * pic;
          pic=(pic_t *)W_CacheLumpName("mmbk",PU_CACHE, Cvt_pic_t, 1);

@@ -22,10 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "profile.h"
 #include "rt_def.h"
 #include <string.h>
-#ifdef RT_OPENGL
-#include <GL/glu.h>
-#endif
-
 #include "watcom.h"
 #include "sprites.h"
 #include "rt_actor.h"
@@ -137,6 +133,8 @@ visobj_t vislist[MAXVISIBLE],*visptr,*visstep,*farthest;
 int firstcoloffset=0;
 
 #ifdef RT_OPENGL
+#include <math.h>
+#include <GL/glu.h>
 #include "opengl/rt_gl.h"
 #endif
 #include <assert.h>
@@ -3402,7 +3400,7 @@ void ApogeeTitle (void)
 #endif
       FlipPage();
 #ifndef DOS
-      SDL_Delay(10);
+      I_Sleep(10);
 #endif
       CalcTics();
       angle+=dangle*tics;
@@ -3426,7 +3424,7 @@ void ApogeeTitle (void)
    while (MU_SongPlaying())
       {
 #ifndef DOS
-	SDL_Delay(10);
+	I_Sleep(10);
 #endif
       IN_PumpEvents();
       if ((LastScan) || IN_GetMouseButtons())
@@ -3705,12 +3703,13 @@ void UpdateScreenSaver ( void )
 //
 //******************************************************************************
 
+#ifdef RT_OPENGL
+void DrawBackground ( int bkgnd ) {
+  DrawNormalSprite(0, 0, bkgnd);
+}
+#else
 void DrawBackground ( byte * bkgnd )
 {
-#ifdef RT_OPENGL
-	DrawNormalSprite(0, 0, bkgnd);
-	return;
-#endif
 
 //   int plane;
    int size;
@@ -3723,6 +3722,7 @@ void DrawBackground ( byte * bkgnd )
       bkgnd+=size;
       }
 }
+#endif
 
 
 //******************************************************************************
@@ -4869,7 +4869,7 @@ void DoYouWin ( void )
    PrepareBackground ( back );
 #else
    back = W_GetNumForName ("mmbk");
-   DrawXYPic(0,0, (pic_t *) W_CacheLumpNum (W_GetNumForName ("mmbk"), PU_CACHE, Cvt_pic_t, 1));
+   DrawXYPic(0,0, back);
 #endif
    FlipPage();
    VL_FadeIn (0, 255, origpal, 30);
@@ -4898,7 +4898,7 @@ void DoFinalEnd ( void )
    pic = (pic_t *) W_CacheLumpNum (W_GetNumForName ("mmbk"), PU_CACHE, Cvt_pic_t, 1);
    VWB_DrawPic (0, 0, pic);
 #else
-   DrawXYPic(0,0, (pic_t *) W_CacheLumpNum (W_GetNumForName ("mmbk"), PU_CACHE, Cvt_pic_t, 1));
+   DrawXYPic(0,0, W_GetNumForName ("mmbk"));
    back = W_GetNumForName ("mmbk");
 #endif
    DrawNormalSprite(0,0,W_GetNumForName("sombrero"));
@@ -5576,7 +5576,7 @@ void DoCreditScreen ( void )
 {
    int trilogo;
    int time;
-#ifdef RT_OPENGL
+#ifndef RT_OPENGL
    byte * bkgnd;
 #else
    int bkgnd;
@@ -5681,7 +5681,7 @@ void DoMicroStoryScreen ( void )
    pic=(pic_t *)W_CacheLumpName("mmbk",PU_CACHE,Cvt_pic_t,1);
    VWB_DrawPic (0, 0, pic);
 #else
-   DrawXYPic(0, 0, (pic_t *)W_CacheLumpName("mmbk",PU_CACHE,Cvt_pic_t,1));
+   DrawXYPic(0, 0, W_GetNumForName("mmbk"));
 #endif
    CheckHolidays();
 

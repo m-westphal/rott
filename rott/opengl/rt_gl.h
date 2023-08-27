@@ -18,6 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#include "rt_def.h" // MAPSIZE
 #include "rt_gl_cap.h"
 
 typedef struct {
@@ -44,7 +45,7 @@ void		VGL_DrawShapeFan (const fixed x, const fixed, const fixed);
 void		VGL_InitHash(void);
 void		VGL_DestroyHash(void);
 void		VGL_DrawSky(const fixed);
-void		VGL_DrawSpotVis(const byte *, const word *, const unsigned short int *, const int *, const unsigned long *lights);
+void		VGL_DrawSpotVis(const byte[MAPSIZE][MAPSIZE], const word[MAPSIZE][MAPSIZE], const unsigned short int *, const int *, const unsigned long *lights);
 void		VGL_SetGas( const int );
 void		VGL_SetFog(void);
 void		VGL_Draw2DTexture(const int x, const int y, const unsigned int width, const unsigned int height, const float texx, const float texy);

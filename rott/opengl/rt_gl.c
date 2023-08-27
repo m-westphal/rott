@@ -1042,19 +1042,21 @@ void _update_near_lights(const unsigned long* lights, const int x, const int y) 
 	rtglLightfv(GL_LIGHT1, GL_POSITION, pos);
 }
 
-void VGL_DrawSpotVis (const byte *spotvis, const word *tilemap, const unsigned short int* raw, const int *lightsource, const unsigned long* lights) {
+void VGL_DrawSpotVis (const byte spotvis[MAPSIZE][MAPSIZE], const word tilemap[MAPSIZE][MAPSIZE], const unsigned short int* raw, const int *lightsource, const unsigned long* lights) {
 	unsigned int i;
 	unsigned int j;
-	boolean visible[128*128];
+	boolean visible[MAPSIZE][MAPSIZE];
 
-	for (i = 0; i < 128*128; i++)
-		visible[i] = false;
+	for (i = 0; i < MAPSIZE; i++)
+		for (j = 0; j < MAPSIZE; j++)
+			visible[i][j] = false;
 
-	for (i = 129; i < 128*127; i++)
-		if(spotvis[i] == 1)
-			visible[i] = 1;
-		else
-			visible[i] = 0;
+	for (i = 1; i < MAPSIZE-1; i++)
+		for (j = 1; j < MAPSIZE-1; j++)
+			if(spotvis[i][j] == 1)
+				visible[i][j] = 1;
+			else
+				visible[i][j] = 0;
 
 	//Get current billboarding vars
 	//NOTE: billboarding only alignes to camera plane
@@ -1102,9 +1104,9 @@ void VGL_DrawSpotVis (const byte *spotvis, const word *tilemap, const unsigned s
 
 	rtglNormal3f(0,1,0);
 	VGL_Bind_Texture ( floornum, RTGL_TEXTURE_FLOOR | RTGL_GENERATE_MIPMAPS | 128);
-	for (i = 1; i < 127; i++)
-		for (j = 1; j < 127; j++) {
-			if (visible[i*128+j] == true) {
+	for (i = 1; i < MAPSIZE-1; i++)
+		for (j = 1; j < MAPSIZE-1; j++) {
+			if (visible[i][j] == true) {
                                 GLfloat t_s1, t_s2, t_t1, t_t2;
                                 if (i % 2 == 0) {
                                     t_s1 = 0.0f;
@@ -1136,9 +1138,9 @@ void VGL_DrawSpotVis (const byte *spotvis, const word *tilemap, const unsigned s
 	if (ceilingnum != 0) {
 		rtglNormal3f(0,-1,0);
 		VGL_Bind_Texture ( ceilingnum, RTGL_TEXTURE_FLOOR | RTGL_GENERATE_MIPMAPS | 128);
-		for (i = 1; i < 127; i++)
-			for (j = 1; j < 127; j++)
-				if (visible[i*128+j] == true) {
+		for (i = 1; i < MAPSIZE-1; i++)
+			for (j = 1; j < MAPSIZE-1; j++)
+				if (visible[i][j] == true) {
 						GLfloat	vertex_and_tex[20] = {	1, 0, (GLfloat) i + 1, max_level_height, (GLfloat) j,
 										1, 1, (GLfloat) i + 1, max_level_height, (GLfloat) j + 1,
 										0, 1, (GLfloat) i, max_level_height, (GLfloat) j + 1,
@@ -1154,11 +1156,11 @@ void VGL_DrawSpotVis (const byte *spotvis, const word *tilemap, const unsigned s
 		rtglMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, values);
 	}
 
-	for (i = 1; i < 127; i++)
-		for (j = 1; j < 127; j++)
-			if (visible[i*128+j] == true) {
+	for (i = 1; i < MAPSIZE-1; i++)
+		for (j = 1; j < MAPSIZE-1; j++)
+			if (visible[i][j] == true) {
 				if (*lightsource) _update_near_lights(lights, i, j);
-				_generate_cell (&tilemap[i*128+j], i, j, raw);
+				_generate_cell (&tilemap[i][j], i, j, raw);
 			}
 
 	if(rtgl_has_shader)
