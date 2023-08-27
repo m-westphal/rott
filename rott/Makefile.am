@@ -1,4 +1,10 @@
+AUTOMAKE_OPTIONS = subdir-objects
 SUBDIRS = audiolib
+
+rott@SUFFIX@_CFLAGS = @SDL_CFLAGS@ @SDL_mixer_CFLAGS@
+if BUILD_RT_OPENGL
+rott@SUFFIX@_CFLAGS += -DRT_OPENGL
+endif
 
 bin_PROGRAMS = rott@SUFFIX@
 rott@SUFFIX@_SOURCES = \
@@ -11,13 +17,11 @@ rott@SUFFIX@_SOURCES = \
 	cin_util.c \
 	dosutil.c \
 	dukemusc.c \
-	engine.c \
 	isr.c \
 	m_misc2.c \
 	modexlib.c \
 	rt_actor.c \
 	rt_battl.c \
-	rt_build.c \
 	rt_cfg.c \
 	rt_com.c \
 	rt_crc.c \
@@ -37,7 +41,6 @@ rott@SUFFIX@_SOURCES = \
 	rt_net.c \
 	rt_playr.c \
 	rt_rand.c \
-	rt_scale.c \
 	rt_sound.c \
 	rt_sqrt.c \
 	rt_stat.c \
@@ -52,5 +55,12 @@ rott@SUFFIX@_SOURCES = \
 	winrott.c \
 	w_wad.c \
 	z_zone.c
-rott@SUFFIX@_CFLAGS = @SDL_CFLAGS@ @SDL_mixer_CFLAGS@
+
 rott@SUFFIX@_LDADD = audiolib/libaudiolib.a @SDL_LIBS@ @SDL_mixer_LIBS@
+
+if BUILD_RT_OPENGL
+rott@SUFFIX@_SOURCES += opengl/engine.c opengl/rt_build.c opengl/rt_gl.c opengl/rt_gl_hash.c opengl/rt_gl_init.c opengl/rt_gl_sdl_video_init.c opengl/rt_gl_shader.c opengl/rt_gl_texture.c opengl/rt_scale.c
+rott@SUFFIX@_LDADD += -lm -lGLU
+else
+rott@SUFFIX@_SOURCES += engine.c rt_build.c rt_scale.c
+endif

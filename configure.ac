@@ -41,7 +41,7 @@ AC_ARG_ENABLE([shareware],
               [AS_HELP_STRING([--enable-shareware],
                               [set to build the shareware version])],
               [AC_DEFINE([SHAREWARE])],
-              [])
+              [enable_shareware=no])
 
 # Set executable file name suffix
 AC_ARG_ENABLE([suffix],
@@ -49,6 +49,11 @@ AC_ARG_ENABLE([suffix],
                               [set executable file name suffix])],
               [suffix="$enableval"],
               [suffix=no])
+
+AC_ARG_ENABLE([opengl],
+	      AS_HELP_STRING([--disable-opengl], [Disable opengl support]),
+	      [], [enable_opengl=no])
+AM_CONDITIONAL([BUILD_RT_OPENGL], [test "x$enable_opengl" != xno])
 
 case "$suffix" in
 no|yes)
@@ -68,7 +73,7 @@ AC_ARG_ENABLE([datadir],
               [AS_HELP_STRING([--enable-datadir],
                               [set data file directory])],
               [datadir="$enableval"],
-              [datadir=no])
+              [enable_datadir=no])
 
 # Remove duplicate and trailing slashes
 datadir=`echo ${datadir} | tr -s '/' | sed 's|/*$||'`
@@ -83,10 +88,19 @@ esac
 
 AC_ARG_ENABLE([werror],
               [AS_HELP_STRING([--enable-werror],
-                              [Treat warnings as errors])])
+                              [Treat warnings as errors])],
+              [], [enable_werror=no])
 
 AS_IF([test "x$enable_werror" = "xyes"],
       [CFLAGS="$CFLAGS -Werror"])
 
 AC_CONFIG_FILES([Makefile rott/Makefile rott/audiolib/Makefile])
 AC_OUTPUT
+
+echo "
+rott configuration:
+  enable shareware:		${enable_shareware}
+  enable OpenGL:		${enable_opengl}
+  extra datadir:		${enable_datadir}
+  treat warnings as errors:	${enable_werror}
+"
