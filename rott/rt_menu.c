@@ -2001,6 +2001,34 @@ int HandleMenu (CP_iteminfo *item_i, CP_itemtype *items, void (*routine)(int w))
 
    do
    {
+#ifdef RT_OPENGL
+    // 2d code only selectively refreshes the content
+    // redraw everythig to avoid graphic glitches
+      boolean redraw_cursor = true;
+      rtglClear(GL_COLOR_BUFFER_BIT);
+      ClearMenuBuf();  // trilogo/title and empty menu plane
+      if (item_i == &MainItems) { // MainMenu
+         DrawMainMenu();
+      } else if (item_i == &PlayerItems) {
+         DrawMenu (&PlayerItems, &PlayerMenu[0]);
+         DisplayInfo (0);
+         redraw_cursor = false;
+      } else if (item_i == &TufItems) {
+         redraw_cursor = false;
+         DrawMenu(item_i, items);
+         DisplayInfo (0);
+      } else if (item_i == &DetailItems) {
+         DrawDetailMenu ();
+      }
+
+      if (redraw_cursor) {
+         // redraw cursor at current position
+         DrawMenuBufItem (x, y, W_GetNumForName( CursorLump ) + CursorFrame[ CursorNum ] );
+      }
+
+      if (routine)
+         routine (handlewhich);
+#endif
       ReadAnyControl (&ci);
       RefreshMenuBuf (0);
      // Change Cursor Shape
@@ -4848,9 +4876,7 @@ void DisplayInfo (int which)
 
    x = (288 - p->width) >> 1;
 
-#ifdef RT_OPENGL
    EraseMenuBufRegion (x, 149, p->width, p->height);
-#endif
    DrawMenuBufItem (x, 149, num);
 }
 
