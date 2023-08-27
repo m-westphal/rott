@@ -710,10 +710,17 @@ CP_MenuNames ControlMMenuNames[] =
    "EXT USER OPTIONS",//bna added
    "MUSIC VOLUME",
    "SOUND FX VOLUME"
+#ifdef RT_OPENGL
+   ,"OPENGL OPTIONS"
+#endif
 
    };
+#ifdef RT_OPENGL
+CP_iteminfo ControlMItems = {32, 48-8, 6, 0, 32, ControlMMenuNames, mn_largefont };
+#else
 CP_iteminfo ControlMItems = {32, 48-8, 5, 0, 32, ControlMMenuNames, mn_largefont };//bna added
 //CP_iteminfo ControlMItems = {32, 48, 4, 0, 32, ControlMMenuNames, mn_largefont };
+#endif
 
 CP_itemtype ControlMMenu[] =
 {
@@ -722,8 +729,34 @@ CP_itemtype ControlMMenu[] =
    {1, "euopt\0", 'E', (menuptr)CP_ExtOptionsMenu},//bna added
    {1, "muvolumn\0", 'M', (menuptr)MusicVolume},
    {1, "fxvolumn\0", 'S', (menuptr)FXVolume}
-
+#ifdef RT_OPENGL
+   ,{1, "openglo\0", 'O', (menuptr)OpenGLOptions}
+#endif
 };
+
+#ifdef RT_OPENGL
+CP_MenuNames OpenGLMenuNames[] =
+   {
+   "LIGHTING",
+   "FOG",
+   "COMPRESS TEXTURES",
+   "MULTISAMPLE",
+   "ANISOTROPY",
+   "MIPMAPS"
+   };
+CP_iteminfo OpenGLItems  = { 20, 44, 6, 0, 43, OpenGLMenuNames, mn_largefont };
+CP_itemtype OpenGLMenu[] =
+   {
+      { 2, "gl_light\0", 'L', NULL },
+      { 1, "gl_fog\0", 'F', NULL },
+      { 1, "gl_tc\0", 'C', NULL },
+      { 1, "gl_mults\0", 'M', NULL },
+      { 1, "gl_aniso\0", 'A', NULL },
+      { 1, "gl_mip\0", 'N', NULL }
+   };
+#endif
+
+
 
 CP_MenuNames OptionsNames[] =
    {
@@ -4951,6 +4984,132 @@ void FXVolume
       DrawControlMenu();
    }
 
+#ifdef RT_OPENGL
+void OpenGLOptions (void) {
+	int which, on, off;
+	int newf_rgb = rtgl_rgb;
+	int newf_rgba = rtgl_rgba;
+	int newf_la = rtgl_luminance_alpha;
+	int newf_mipmaps = rtgl_use_mipmaps;
+	extern	GLint	rtgl_rgb;
+	extern	GLint	rtgl_rgba;
+	extern	GLint	rtgl_luminance_alpha;
+
+	if (!rtgl_has_compression_rgb && !rtgl_has_compression_rgba)
+		OpenGLMenu[2].active = CP_Inactive;
+	if (!rtgl_has_multisample)
+		OpenGLMenu[3].active = CP_Inactive;
+	if (rtgl_max_anisotropy <= 1.0f)
+		OpenGLMenu[4].active = CP_Inactive;
+
+	MenuNum = 99;
+	ClearMenuBuf();
+	SetMenuTitle ("OpenGL Options");
+
+	DrawMenu (&OpenGLItems, &OpenGLMenu[0]);
+	DisplayInfo (0);
+//BUTTONSTUFF
+	on  = W_GetNumForName ("snd_on");
+	off = W_GetNumForName ("snd_off");
+
+	if (rtgl_use_lighting)
+		DrawMenuBufItem (20+22, OptionsItems.y+2*14-1, on);
+	else
+		DrawMenuBufItem (20+22, OptionsItems.y+2*14-1, off);
+	if (rtgl_use_fog)
+		DrawMenuBufItem (20+22, OptionsItems.y+3*14-1, on);
+	else
+		DrawMenuBufItem (20+22, OptionsItems.y+3*14-1, off);
+	if (rtgl_rgb == GL_COMPRESSED_RGB_ARB || rtgl_rgba == GL_COMPRESSED_RGBA_ARB)
+		DrawMenuBufItem (20+22, OptionsItems.y+4*14-1, on);
+	else
+		DrawMenuBufItem (20+22, OptionsItems.y+4*14-1, off);
+	if (rtgl_use_multisample)
+		DrawMenuBufItem (20+22, OptionsItems.y+5*14-1, on);
+	else
+		DrawMenuBufItem (20+22, OptionsItems.y+5*14-1, off);
+	if (rtgl_use_mipmaps)
+		DrawMenuBufItem (20+22, OptionsItems.y+7*14-1, on);
+	else
+		DrawMenuBufItem (20+22, OptionsItems.y+7*14-1, off);
+
+	do {
+		which = HandleMenu( &OpenGLItems, &OpenGLMenu[ 0 ], NULL );
+		switch (which) {
+			case 0:
+				if (rtgl_use_lighting) {
+					rtgl_use_lighting = 0;
+					DrawMenuBufItem (20+22, OptionsItems.y+2*14-1, off);
+				}
+				else {
+					rtgl_use_lighting = 1;
+					DrawMenuBufItem (20+22, OptionsItems.y+2*14-1, on);
+				}
+				break;
+			case 1:
+				if (rtgl_use_fog) {
+					rtgl_use_fog = 0;
+					DrawMenuBufItem (20+22, OptionsItems.y+3*14-1, off);
+				}
+				else {
+					rtgl_use_fog = 1;
+					DrawMenuBufItem (20+22, OptionsItems.y+3*14-1, on);
+				}
+				break;
+			case 2:
+				if (newf_rgb == GL_COMPRESSED_RGB_ARB) {
+					newf_rgb = GL_RGB;
+					newf_rgba = GL_RGBA;
+					newf_la = GL_LUMINANCE_ALPHA;
+					DrawMenuBufItem (20+22, OptionsItems.y+4*14-1, off);
+				}
+				else {
+					if (rtgl_has_compression_rgb) newf_rgb = GL_COMPRESSED_RGB_ARB;
+					if (rtgl_has_compression_rgba) newf_rgba = GL_COMPRESSED_RGBA_ARB;
+					if (rtgl_has_compression_luminance_alpha) newf_la = GL_COMPRESSED_LUMINANCE_ALPHA_ARB;
+					DrawMenuBufItem (20+22, OptionsItems.y+4*14-1, on);
+				}
+			break;
+		case 3:
+			assert(rtgl_has_multisample);
+			if (rtgl_use_multisample) {
+				rtgl_use_multisample = 0;
+				rtglDisable(GL_MULTISAMPLE_ARB);	//FIXME get new visual...
+				DrawMenuBufItem (20+22, OptionsItems.y+5*14-1, off);
+			}
+			else {
+				rtgl_use_multisample = rtgl_has_multisample;
+				rtglEnable(GL_MULTISAMPLE_ARB);
+				DrawMenuBufItem (20+22, OptionsItems.y+5*14-1, on);
+			}
+			break;
+		case 4: break; //anisotropy
+		case 5:
+			if (newf_mipmaps) {
+				newf_mipmaps = 0;
+				DrawMenuBufItem (20+22, OptionsItems.y+7*14-1, off);
+			}
+			else {
+				newf_mipmaps = 1;
+				DrawMenuBufItem (20+22, OptionsItems.y+7*14-1, on);
+			}
+			break;
+		}
+	} while( which >= 0 );
+
+	if (newf_rgb != rtgl_rgb || newf_rgba != rtgl_rgba || newf_la != rtgl_luminance_alpha || newf_mipmaps != rtgl_use_mipmaps) {
+		VGL_DestroyHash();
+		VGL_InitHash();
+		rtgl_rgb = newf_rgb;
+		rtgl_rgba = newf_rgba;
+		rtgl_luminance_alpha = newf_la;
+		rtgl_use_mipmaps = newf_mipmaps;
+	}
+
+	ClearMenuBuf();
+	DrawControlMenu();
+}
+#endif
 
 
 //****************************************************************************
