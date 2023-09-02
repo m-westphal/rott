@@ -253,8 +253,9 @@ int rtgl_SupportedCard(void) {
 		if(rtglUploadTextureShader()) {
 			rtgl_has_shader = 1;
 			puts("RT_GL: Texture shader enabled\n");
-		}
+		} else {
 			printf("Texture Shader upload failed\n");
+		}
 	}
 	if (!rtgl_has_shader)
 		printf("RT_GL: texture shaders not supported\n");
