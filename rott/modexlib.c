@@ -116,20 +116,20 @@ void SetShowCursor(int show)
 }
 
 #ifdef RT_OPENGL
-void set_rt_gl_has_multisample(uint32_t flags) {
-	rtgl_has_multisample = 0;
-#ifdef FALSE
-// FIXME: SDL1 code incompatible with SDL2
+void set_rt_gl_has_multisample() {
         /* check for multisample support */
-        for (rtgl_has_multisample = 16; sdl_surface == NULL && rtgl_has_multisample > 1;) {
-                SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-                SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, rtgl_has_multisample);
-                sdl_surface = SDL_SetVideoMode ( rtgl_screen_width, rtgl_screen_height, 8, flags );
+        for (rtgl_has_multisample = 16; rtgl_has_multisample > 1; rtgl_has_multisample /= 2) {
+                if (SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1) == -1) {
+                    printf("failed to set SDL_GL_MULTISAMPLEBUFFERS\n");
+                    rtgl_has_multisample = 0;
+                    return;
+                }
 
-                if(sdl_surface == NULL)
-                        rtgl_has_multisample /= 2;
+                if (SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, rtgl_has_multisample) != -1) {
+                    printf("Set SDL_GL_MULTISAMPLESAMPLES to %d\n", rtgl_has_multisample);
+                    return;
+                }
         }
-#endif
 }
 #endif
 
@@ -161,6 +161,8 @@ void GraphicsMode ( void )
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
+	set_rt_gl_has_multisample();
 
 	screen = SDL_CreateWindow(NULL,
 	                          SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -213,7 +215,6 @@ void GraphicsMode ( void )
 	printf("RT_GL: OpenGL start\n");
 
 	SDL_GL_CreateContext(screen);
-	set_rt_gl_has_multisample(flags);
 
 	if( ! rtgl_SupportedCard() )
 		Error ("RT_GL: failed to initialize\n");
