@@ -2827,26 +2827,34 @@ void ScreenShake (void)
       {
          case 0:
             displayofs += 1;
+#ifndef RT_OPENGL
 			MoveScreenUpLeft();//SetTextMode (  );
 			DrawPlayScreen(true);//repaint ammo and life stat
+#endif
          break;
 
          case 1:
             displayofs -= 1;
+#ifndef RT_OPENGL
 			MoveScreenUpRight();
 			DrawPlayScreen(true);//repaint ammo and life stat
+#endif
          break;
 
          case 2:
             displayofs += 3*iGLOBAL_SCREENBWIDE;
+#ifndef RT_OPENGL
 			MoveScreenDownLeft();
 			DrawPlayScreen(true);//repaint ammo and life stat
+#endif
          break;
 
          case 3:
             displayofs -= 3*iGLOBAL_SCREENBWIDE;
+#ifndef RT_OPENGL
 			MoveScreenDownRight();
 			DrawPlayScreen(true);//repaint ammo and life stat
+#endif
          break;
       }
 
