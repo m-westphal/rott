@@ -2321,22 +2321,11 @@ void PollMove (void)
    int x, y;
 
 
-#ifndef RT_OPENGL
    x = KX + MX + JX + CX + VX;
    y = KY + MY + JY + CY + VY;
 
    if (buttonpoll[bt_aimbutton])
       {
-#else
-   x = KX + 9 * MX + JX + CX + VX;
-   y = KY + JY + CY + VY;	//no mouse input
-#endif
-#ifdef RT_OPENGL
-	if (MY != 0) {
-		player->yzangle+= MY /15;
-		Fix(player->yzangle);
-	}
-#else
       if (y>0)
          {
          buttonpoll[bt_horizonup]=1;
@@ -2359,7 +2348,6 @@ void PollMove (void)
       {
       aimbuttonpressed=false;
       }
-#endif
 
    if (player->flags & FL_FLEET)
 		y += y>>1;
@@ -3869,7 +3857,6 @@ void PlayerTiltHead (objtype * ob)
       }
 
 
-#ifndef RT_OPENGL
    if ((yzangle!=pstate->horizon) && (dyz==0))
       {
       int speed;
@@ -3882,7 +3869,6 @@ void PlayerTiltHead (objtype * ob)
       if ((abs(yzangle-pstate->horizon))<SNAPBACKSPEED)
          yzangle=pstate->horizon;
       }
-#endif
 //SetTextMode();
 
 	if (yzangle != 512){
@@ -4022,7 +4008,8 @@ void UpdatePlayers ( void )
    objtype * obj;
 //   playertype * pstate;
 
-	for (obj = FIRSTACTOR; obj->obclass==playerobj; obj = obj->next)
+   /* FIXME: list seems to include NULL ptrs? */
+	for (obj = FIRSTACTOR; obj != NULL && obj->obclass==playerobj; obj = obj->next)
 		 {
 
 //ErrorDontQuit("obj->next = ",obj->next);
