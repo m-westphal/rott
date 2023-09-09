@@ -88,7 +88,6 @@ static SDL_Surface *unstretch_sdl_surface = NULL;
 
 static SDL_Window *screen;
 #ifndef RT_OPENGL
-static SDL_Surface *sdl_surface = NULL;
 static SDL_Renderer *renderer;
 static SDL_Surface *argbbuffer;
 static SDL_Texture *texture;
