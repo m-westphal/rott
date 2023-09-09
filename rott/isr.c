@@ -138,7 +138,8 @@ void I_Delay ( int delay )
    time=GetTicCount();
    while (!LastScan && !IN_GetMouseButtons() && GetTicCount()<time+delay)
       {
-      	IN_UpdateKeyboard();
+        I_Sleep(1);
+        IN_UpdateKeyboard();
       }
 }
 
