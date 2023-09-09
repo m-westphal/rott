@@ -984,7 +984,7 @@ void DrawPreCache( void )
       else
          {
 #ifdef RT_OPENGL
-	DrawXYPic(0,0, W_GetNumForName("mmbk"));
+         DrawXYPic(0,0, W_GetNumForName("mmbk"));
 #else
          pic_t * pic;
          pic=(pic_t *)W_CacheLumpName("mmbk",PU_CACHE, Cvt_pic_t, 1);
@@ -1052,9 +1052,11 @@ void DrawPreCache( void )
 
       US_BufPrint (&temp[0]);
 
+#ifndef RT_OPENGL
       VW_UpdateScreen();
 
       MenuFadeIn ();
+#endif
       }
 }
 
@@ -1127,6 +1129,17 @@ void PreCache( void )
 			    currentmem = MAXLEDS - 1;
          while (lastmem<=currentmem)
             {//SetTextMode (  );
+#ifdef RT_OPENGL
+               DrawPreCache(); // redraw background
+
+               DrawNormalSprite (PRECACHEBARX, PRECACHEBARY, W_GetNumForName ("cachebar"));
+               for (int previous = 0; previous < lastmem*2*2; previous += 4) {
+                  DrawNormalSprite (PRECACHEBARX+PRECACHELED1X+previous, PRECACHEBARY+PRECACHELED1Y, W_GetNumForName ("led1"));//led1 progressbar
+               }
+               for (int previous = 0; previous < lastcache*2*2; previous += 4) {
+                  DrawNormalSprite (PRECACHEBARX+PRECACHELED2X+previous, PRECACHEBARY+PRECACHELED2Y, W_GetNumForName ("led2"));//led2 progressbar
+               }
+#endif
    			if ( iGLOBAL_SCREENWIDTH == 320) {
 				DrawNormalSprite (PRECACHEBARX+PRECACHELED1X+(lastmem<<2),
                               PRECACHEBARY+PRECACHELED1Y,

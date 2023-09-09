@@ -1248,6 +1248,10 @@ void GameLoop (void)
                if ( !BATTLEMODE )
                   {
                   PlayCinematic();
+#ifdef RT_OPENGL
+	//normal palette
+	VL_SetPalette(origpal);
+#endif
                   }
 
                SetupGameLevel();
@@ -1448,6 +1452,10 @@ void GameLoop (void)
                {
                gamestate.mapon = NextLevel;
                PlayCinematic();
+#ifdef RT_OPENGL
+	//normal palette
+	VL_SetPalette(origpal);
+#endif
                fizzlein = true;
                SetupGameLevel ();
                playstate = ex_stillplaying;
@@ -2623,8 +2631,4 @@ void PlayCinematic (void)
       break;
 #endif
    }
-#ifdef RT_OPENGL
-	//normal palette
-	VL_SetPalette(origpal);
-#endif
 }
