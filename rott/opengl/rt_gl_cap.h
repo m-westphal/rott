@@ -32,3 +32,4 @@ extern int	rtgl_has_texture_rectangle;
 
 /* shader support */
 extern int	rtgl_has_shader;
+extern int	rtgl_use_shader;

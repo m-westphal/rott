@@ -78,6 +78,7 @@ int	rtgl_use_lighting = 1;
 int	rtgl_use_mipmaps = 1;
 
 int	rtgl_has_shader; // shader is build on lighting
+int	rtgl_use_shader = 1;
 extern GLuint	rtgl_shader_program;
 
 //DEBUG
@@ -1031,7 +1032,7 @@ void _update_near_lights(const unsigned long* lights, const int x, const int y) 
 			}
 		}
 
-	if(rtgl_has_shader && nr == 0) {
+	if(rtgl_has_shader && rtgl_use_shader && nr == 0) {
 		assert(intensity == 0);
 		nr++;
 	}
@@ -1098,7 +1099,7 @@ void VGL_DrawSpotVis (const byte spotvis[MAPSIZE][MAPSIZE], const word tilemap[M
 			rtglMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, values);
 		}
 
-		if(rtgl_has_shader) {
+		if(rtgl_has_shader && rtgl_use_shader) {
 			if (*lightsource) {
 				rtglEnable(GL_LIGHT1);
 			}
@@ -1180,7 +1181,7 @@ void VGL_DrawSpotVis (const byte spotvis[MAPSIZE][MAPSIZE], const word tilemap[M
 			}
 
 	if (rtgl_use_lighting) {
-		if(rtgl_has_shader)
+		if(rtgl_has_shader && rtgl_use_shader)
 			rtglUseProgram((GLuint) 0);
 
 		if (*lightsource)

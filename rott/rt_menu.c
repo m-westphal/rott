@@ -742,9 +742,10 @@ CP_MenuNames OpenGLMenuNames[] =
    "COMPRESS TEXTURES",
    "MULTISAMPLE",
    "ANISOTROPY",
-   "MIPMAPS"
+   "MIPMAPS",
+   "SHADER"
    };
-CP_iteminfo OpenGLItems  = { 20, 44, 6, 0, 43, OpenGLMenuNames, mn_largefont };
+CP_iteminfo OpenGLItems  = { 20, 44, 7, 0, 43, OpenGLMenuNames, mn_largefont };
 CP_itemtype OpenGLMenu[] =
    {
       { 2, "gl_light\0", 'L', NULL },
@@ -752,7 +753,8 @@ CP_itemtype OpenGLMenu[] =
       { 1, "gl_tc\0", 'C', NULL },
       { 1, "gl_mults\0", 'M', NULL },
       { 1, "gl_aniso\0", 'A', NULL },
-      { 1, "gl_mip\0", 'N', NULL }
+      { 1, "gl_mip\0", 'N', NULL },
+      { 1, "gl_shade\0", 'S', NULL }
    };
 #endif
 
@@ -5027,6 +5029,8 @@ void OpenGLOptions (void) {
 		OpenGLMenu[3].active = CP_Inactive;
 	if (rtgl_max_anisotropy <= 1.0f)
 		OpenGLMenu[4].active = CP_Inactive;
+	if (!rtgl_has_shader)
+		OpenGLMenu[6].active = CP_Inactive;
 
 	MenuNum = 99;
 	ClearMenuBuf();
@@ -5120,6 +5124,20 @@ void OpenGLOptions (void) {
 				DrawMenuBufItem (20+22, OptionsItems.y+7*14-1, on);
 			}
 			break;
+		case 6:
+			if (!rtgl_has_shader) {
+				DrawMenuBufItem (20+22, OptionsItems.y+8*14-1, off);
+			}
+			else {
+				if (rtgl_use_shader) {
+					rtgl_use_shader = 0;
+					DrawMenuBufItem (20+22, OptionsItems.y+8*14-1, off);
+				}
+				else {
+					rtgl_use_shader = 1;
+					DrawMenuBufItem (20+22, OptionsItems.y+8*14-1, on);
+				}
+			}
 		}
 	} while( which >= 0 );
 
