@@ -1972,7 +1972,11 @@ void TransformDoors( void )
               result=TransformPlane(gx,gy+0xffff,gx,gy,doorptr);
 #else
 	rtglNormal3f(-1,0,0);
-	VGL_DrawDoor_Vertical(doorobjlist[i]->tilex, doorobjlist[i]->tiley, doorobjlist[i]->texture, doorobjlist[i]->alttexture, doorobjlist[i]->basetexture, lights);
+	if (lightsource) {
+		VGL_DrawDoor_Vertical(doorobjlist[i]->tilex, doorobjlist[i]->tiley, doorobjlist[i]->texture, doorobjlist[i]->alttexture, doorobjlist[i]->basetexture, lights);
+	} else {
+		VGL_DrawDoor_Vertical(doorobjlist[i]->tilex, doorobjlist[i]->tiley, doorobjlist[i]->texture, doorobjlist[i]->alttexture, doorobjlist[i]->basetexture, NULL);
+	}
 #endif
            }
         else
@@ -1986,7 +1990,11 @@ void TransformDoors( void )
               result=TransformPlane(gx,gy,gx+0xffff,gy,doorptr);
 #else
 	rtglNormal3f(-1,0,0);
-	VGL_DrawDoor_Horizontal(doorobjlist[i]->tilex, doorobjlist[i]->tiley, doorobjlist[i]->texture, doorobjlist[i]->alttexture, doorobjlist[i]->basetexture, lights);
+	if (lightsource) {
+		VGL_DrawDoor_Horizontal(doorobjlist[i]->tilex, doorobjlist[i]->tiley, doorobjlist[i]->texture, doorobjlist[i]->alttexture, doorobjlist[i]->basetexture, lights);
+	} else {
+		VGL_DrawDoor_Horizontal(doorobjlist[i]->tilex, doorobjlist[i]->tiley, doorobjlist[i]->texture, doorobjlist[i]->alttexture, doorobjlist[i]->basetexture, NULL);
+	}
 #endif
            }
 #ifndef RT_OPENGL
@@ -2071,7 +2079,12 @@ void TransformPushWalls( void )
         gy=pwallobjlist[i]->y;
         mapseen[gx>>16][gy>>16]=1;
 #ifdef RT_OPENGL
-	VGL_DrawPushWall( pwallobjlist[i]->x, pwallobjlist[i]->y, pwallobjlist[i]->texture, lights);
+	if (lightsource) {
+		VGL_DrawPushWall( pwallobjlist[i]->x, pwallobjlist[i]->y, pwallobjlist[i]->texture, lights);
+	}
+	else {
+		VGL_DrawPushWall( pwallobjlist[i]->x, pwallobjlist[i]->y, pwallobjlist[i]->texture, NULL);
+	}
 #else
         if (viewx<gx)
            {

@@ -1017,28 +1017,32 @@ void _update_near_lights(const unsigned long* lights, const int x, const int y) 
 
 	const int dist = 2;
 
-	for (i = max(0, x - dist); i <= min(127, x + dist); i++)
-		for (j = max(0, y - dist); j <= min(127, y + dist); j++) {
-			assert(i >= 0 && i <= 127);
-			assert(j >= 0 && j <= 127);
+	if (lights != NULL) {
+		for (i = max(0, x - dist); i <= min(127, x + dist); i++)
+			for (j = max(0, y - dist); j <= min(127, y + dist); j++) {
+				assert(i >= 0 && i <= 127);
+				assert(j >= 0 && j <= 127);
 
-			const unsigned long val = *(lights+(i*128)+j);
-			if (val != 0) {
-				const int dist = 5 * abs(i-x) + 5 * abs(j-y) + 1;
-				intensity += (val >> 20) / dist;
-				pos_x += i - x;
-				pos_y += j - y;
-				nr++;
+				const unsigned long val = *(lights+(i*128)+j);
+				if (val != 0) {
+					const int dist = 5 * abs(i-x) + 5 * abs(j-y) + 1;
+					intensity += (val >> 20) / dist;
+					pos_x += i - x;
+					pos_y += j - y;
+					nr++;
+				}
 			}
-		}
-
-	if(rtgl_has_shader && rtgl_use_shader && nr == 0) {
-		assert(intensity == 0);
-		nr++;
 	}
-	else if (nr == 0) {
-		rtglDisable(GL_LIGHT1);
-		return;
+
+	if (nr == 0) {
+		if(rtgl_has_shader && rtgl_use_shader) {
+			assert(intensity == 0);
+			nr++;
+		}
+		else {
+			rtglDisable(GL_LIGHT1);
+			return;
+		}
 	}
 
 	float light_strength = ((float) intensity) / 4096.0f;
@@ -1145,7 +1149,11 @@ void VGL_DrawSpotVis (const byte spotvis[MAPSIZE][MAPSIZE], const word tilemap[M
 								t_s2, t_t2, (GLfloat) i, 0, (GLfloat) j + 1,
 								t_s1, t_t2, (GLfloat) i + 1, 0, (GLfloat) j + 1,
 								t_s1, t_t1, (GLfloat) i + 1, 0, (GLfloat) j };
-				if (*lightsource) _update_near_lights(lights, i, j);
+				if (*lightsource) {
+					_update_near_lights(lights, i, j);
+				} else {
+					_update_near_lights(NULL, i, j);
+				}
 				rtglInterleavedArrays(GL_T2F_V3F, 0, vertex_and_tex);
 				rtglDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 			}
@@ -1162,7 +1170,11 @@ void VGL_DrawSpotVis (const byte spotvis[MAPSIZE][MAPSIZE], const word tilemap[M
 										1, 1, (GLfloat) i + 1, max_level_height, (GLfloat) j + 1,
 										0, 1, (GLfloat) i, max_level_height, (GLfloat) j + 1,
 										0, 0, (GLfloat) i, max_level_height, (GLfloat) j };
-						if (*lightsource) _update_near_lights(lights, i, j);
+						if (*lightsource) {
+							_update_near_lights(lights, i, j);
+						} else {
+							_update_near_lights(NULL, i, j);
+						}
 						rtglInterleavedArrays(GL_T2F_V3F, 0, vertex_and_tex);
 						rtglDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 				}
@@ -1176,7 +1188,11 @@ void VGL_DrawSpotVis (const byte spotvis[MAPSIZE][MAPSIZE], const word tilemap[M
 	for (i = 1; i < MAPSIZE-1; i++)
 		for (j = 1; j < MAPSIZE-1; j++)
 			if (visible[i][j] == true) {
-				if (*lightsource) _update_near_lights(lights, i, j);
+				if (*lightsource) {
+					_update_near_lights(lights, i, j);
+				} else {
+					_update_near_lights(NULL, i, j);
+				}
 				_generate_cell (&tilemap[i][j], i, j, raw);
 			}
 
@@ -1184,8 +1200,7 @@ void VGL_DrawSpotVis (const byte spotvis[MAPSIZE][MAPSIZE], const word tilemap[M
 		if(rtgl_has_shader && rtgl_use_shader)
 			rtglUseProgram((GLuint) 0);
 
-		if (*lightsource)
-			rtglDisable(GL_LIGHT1);
+		rtglDisable(GL_LIGHT1);
 	}
 }
 
