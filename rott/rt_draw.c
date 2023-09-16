@@ -2071,7 +2071,7 @@ void TransformPushWalls( void )
         gy=pwallobjlist[i]->y;
         mapseen[gx>>16][gy>>16]=1;
 #ifdef RT_OPENGL
-	VGL_DrawPushWall( pwallobjlist[i]->x, pwallobjlist[i]->y, pwallobjlist[i]->texture);
+	VGL_DrawPushWall( pwallobjlist[i]->x, pwallobjlist[i]->y, pwallobjlist[i]->texture, lights);
 #else
         if (viewx<gx)
            {

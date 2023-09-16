@@ -848,7 +848,7 @@ void	VGL_DrawMaskedWall_Horizontal (const fixed x, const fixed y, const int bot_
 }
 
 void	VGL_DrawDoor_Vertical (const int x, const int y, const int bot_text,  const int top_text, const int base_text, const unsigned long* lights) {
-	if (rtgl_use_lighting) _update_near_lights(lights, x, y);
+	_update_near_lights(lights, x, y);
 
 	if ( bot_text >= 0) {
 		if (bot_text != base_text) {
@@ -874,7 +874,7 @@ void	VGL_DrawDoor_Vertical (const int x, const int y, const int bot_text,  const
 }
 
 void	VGL_DrawDoor_Horizontal (const int x, const int y, const int bot_text,  const int top_text, const int base_text, const unsigned long* lights) {
-	if (rtgl_use_lighting) _update_near_lights(lights, x, y);
+	_update_near_lights(lights, x, y);
 
 	if (bot_text >= 0) {
 		if (bot_text != base_text) {
@@ -899,7 +899,10 @@ void	VGL_DrawDoor_Horizontal (const int x, const int y, const int bot_text,  con
 	}
 }
 
-void	VGL_DrawPushWall(const fixed x, const fixed y, const int texture) {
+void	VGL_DrawPushWall(const fixed x, const fixed y, const int texture, const unsigned long* lights) {
+	const int convert_coord = 65536;
+	_update_near_lights(lights, x/convert_coord, y/convert_coord);
+
 	int new_texture;
 
 	if (texture & 0x1000)
@@ -910,18 +913,20 @@ void	VGL_DrawPushWall(const fixed x, const fixed y, const int texture) {
 
 	if (new_texture > 0)
 		VGL_Bind_Texture (new_texture, RTGL_TEXTURE_WALL | RTGL_GENERATE_MIPMAPS | 64);
+        const float xf = x / (float) convert_coord;
+        const float yf = y / (float) convert_coord;
 
 	rtglNormal3f(-1,0,0);
-	_generate_wall(x / 65536.0f - 0.5f, y / 65536.0f - 0.5f, x / 65536.0f - 0.5f, y/65536.0f + 0.5f, 0, max_level_height);
+	_generate_wall(xf - 0.5f, yf - 0.5f, xf - 0.5f, yf + 0.5f, 0, max_level_height);
 
 	rtglNormal3f(1,0,0);
-	_generate_wall(x / 65536.0f + 0.5f, y / 65536.0f + 0.5f, x / 65536.0f + 0.5f, y/65536.0f - 0.5f, 0, max_level_height);
+	_generate_wall(xf + 0.5f, yf + 0.5f, xf + 0.5f, yf - 0.5f, 0, max_level_height);
 
 	rtglNormal3f(0,0,1);
-	_generate_wall(x / 65536.0f - 0.5f, y / 65536.0f + 0.5f, x / 65536.0f + 0.5f, y/65536.0f + 0.5f, 0, max_level_height);
+	_generate_wall(xf - 0.5f, yf + 0.5f, xf + 0.5f, yf + 0.5f, 0, max_level_height);
 
 	rtglNormal3f(0,0,-1);
-	_generate_wall(x / 65536.0f + 0.5f, y / 65536.0f - 0.5f, x / 65536.0f - 0.5f, y/65536.0f - 0.5f, 0, max_level_height);
+	_generate_wall(xf + 0.5f, yf - 0.5f, xf - 0.5f, yf - 0.5f, 0, max_level_height);
 }
 
 void	VGL_DrawShapeFan ( const fixed x, const fixed y, const fixed z) {
