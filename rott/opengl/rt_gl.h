@@ -39,8 +39,8 @@ void		VGL_SetupLevel (const int, const int, const int, const int, const int, con
 void		VGL_DrawPushWall(const fixed, const fixed, const int);
 void		VGL_DrawMaskedWall_Vertical (const fixed, const fixed, const int,  const int, const int);
 void		VGL_DrawMaskedWall_Horizontal (const fixed, const fixed, const int,  const int, const int);
-void		VGL_DrawDoor_Horizontal (const fixed, const fixed, const int,  const int, const int);
-void		VGL_DrawDoor_Vertical (const fixed, const fixed, const int,  const int, const int);
+void		VGL_DrawDoor_Horizontal (const int, const int, const int,  const int, const int, const unsigned long* lights);
+void		VGL_DrawDoor_Vertical (const int, const int, const int,  const int, const int, const unsigned long* lights);
 void		VGL_DrawShapeFan (const fixed x, const fixed, const fixed);
 void		VGL_InitHash(void);
 void		VGL_DestroyHash(void);

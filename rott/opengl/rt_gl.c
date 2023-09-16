@@ -847,7 +847,8 @@ void	VGL_DrawMaskedWall_Horizontal (const fixed x, const fixed y, const int bot_
 	}
 }
 
-void	VGL_DrawDoor_Vertical (const fixed x, const fixed y, const int bot_text,  const int top_text, const int base_text) {
+void	VGL_DrawDoor_Vertical (const int x, const int y, const int bot_text,  const int top_text, const int base_text, const unsigned long* lights) {
+	if (rtgl_use_lighting) _update_near_lights(lights, x, y);
 
 	if ( bot_text >= 0) {
 		if (bot_text != base_text) {
@@ -855,24 +856,25 @@ void	VGL_DrawDoor_Vertical (const fixed x, const fixed y, const int bot_text,  c
 			rtglEnable( GL_BLEND );
 			VGL_Bind_Texture (bot_text, RTGL_TEXTURE_TRANSPATCH | RTGL_GENERATE_MIPMAPS | RTGL_FILTER_RGBA | RTGL_TEXTURE_SHIFT_WORKAROUND | 64);
 
-			_generate_wall(x / 65536.0f + 0.5f, y / 65536.0f, x / 65536.0f + 0.5f, y/65536.0f + 1, 0, 1);
+			_generate_wall(x + 0.5f, y, x + 0.5f, y + 1, 0, 1);
 
 			rtglDisable ( GL_ALPHA_TEST );
 			rtglDisable ( GL_BLEND );
 		}
 		else {
 			VGL_Bind_Texture (bot_text, RTGL_TEXTURE_WALL | RTGL_GENERATE_MIPMAPS | 64);
-			_generate_wall(x / 65536.0f + 0.5f, y / 65536.0f, x / 65536.0f + 0.5f, y/65536.0f + 1, 0, 1);
+			_generate_wall(x + 0.5f, y, x + 0.5f, y + 1, 0, 1);
 		}
 	}
 	if ( top_text >= 0 && max_level_height > 1) {
 		VGL_Bind_Texture (top_text, RTGL_TEXTURE_WALL | RTGL_GENERATE_MIPMAPS | 64);
 
-		_generate_wall(x / 65536.0f + 0.5f, y / 65536.0f, x / 65536.0f + 0.5f, y/65536.0f + 1, 1, max_level_height);
+		_generate_wall(x + 0.5f, y, x + 0.5f, y + 1, 1, max_level_height);
 	}
 }
 
-void	VGL_DrawDoor_Horizontal (const fixed x, const fixed y, const int bot_text,  const int top_text, const int base_text) {
+void	VGL_DrawDoor_Horizontal (const int x, const int y, const int bot_text,  const int top_text, const int base_text, const unsigned long* lights) {
+	if (rtgl_use_lighting) _update_near_lights(lights, x, y);
 
 	if (bot_text >= 0) {
 		if (bot_text != base_text) {
@@ -880,20 +882,20 @@ void	VGL_DrawDoor_Horizontal (const fixed x, const fixed y, const int bot_text, 
 			rtglEnable( GL_BLEND );
 			VGL_Bind_Texture (bot_text, RTGL_TEXTURE_TRANSPATCH | RTGL_GENERATE_MIPMAPS | RTGL_FILTER_RGBA | RTGL_TEXTURE_SHIFT_WORKAROUND | 64);
 
-			_generate_wall(x / 65536.0f, y / 65536.0f + 0.5f, x / 65536.0f + 1, y/65536.0f + 0.5f, 0, 1);
+			_generate_wall(x, y + 0.5f, x + 1, y + 0.5f, 0, 1);
 
 			rtglDisable ( GL_ALPHA_TEST );
 			rtglDisable ( GL_BLEND );
 		}
 		else {
 			VGL_Bind_Texture (bot_text, RTGL_TEXTURE_WALL | RTGL_GENERATE_MIPMAPS | 64);
-			_generate_wall(x / 65536.0f, y / 65536.0f + 0.5f, x / 65536.0f + 1, y/65536.0f + 0.5f, 0, 1);
+			_generate_wall(x, y + 0.5f, x + 1, y + 0.5f, 0, 1);
 		}
 	}
 	if ( top_text >= 0 && max_level_height > 1) {
 		VGL_Bind_Texture (top_text, RTGL_TEXTURE_WALL | RTGL_GENERATE_MIPMAPS | 64);
 
-		_generate_wall(x / 65536.0f, y / 65536.0f + 0.5f, x / 65536.0f + 1, y/65536.0f + 0.5f, 1, max_level_height);
+		_generate_wall(x, y + 0.5f, x + 1, y + 0.5f, 1, max_level_height);
 	}
 }
 
@@ -1037,8 +1039,7 @@ void _update_near_lights(const unsigned long* lights, const int x, const int y) 
 
 	light_strength = fmin(1.0, light_strength);
 
-	if(!rtgl_has_shader)
-		rtglEnable(GL_LIGHT1);
+	rtglEnable(GL_LIGHT1);
 	GLfloat white[4] = { (GLfloat) light_strength, (GLfloat) light_strength, (GLfloat) light_strength,1};
 	rtglLightfv(GL_LIGHT1, GL_AMBIENT, white);
 	rtglLightfv(GL_LIGHT1, GL_DIFFUSE, white);

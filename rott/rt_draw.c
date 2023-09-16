@@ -1972,7 +1972,7 @@ void TransformDoors( void )
               result=TransformPlane(gx,gy+0xffff,gx,gy,doorptr);
 #else
 	rtglNormal3f(-1,0,0);
-	VGL_DrawDoor_Vertical(doorobjlist[i]->tilex*65536, doorobjlist[i]->tiley*65536, doorobjlist[i]->texture, doorobjlist[i]->alttexture, doorobjlist[i]->basetexture);
+	VGL_DrawDoor_Vertical(doorobjlist[i]->tilex, doorobjlist[i]->tiley, doorobjlist[i]->texture, doorobjlist[i]->alttexture, doorobjlist[i]->basetexture, lights);
 #endif
            }
         else
@@ -1986,7 +1986,7 @@ void TransformDoors( void )
               result=TransformPlane(gx,gy,gx+0xffff,gy,doorptr);
 #else
 	rtglNormal3f(-1,0,0);
-	VGL_DrawDoor_Horizontal(doorobjlist[i]->tilex*65536, doorobjlist[i]->tiley*65536, doorobjlist[i]->texture, doorobjlist[i]->alttexture, doorobjlist[i]->basetexture);
+	VGL_DrawDoor_Horizontal(doorobjlist[i]->tilex, doorobjlist[i]->tiley, doorobjlist[i]->texture, doorobjlist[i]->alttexture, doorobjlist[i]->basetexture, lights);
 #endif
            }
 #ifndef RT_OPENGL
