@@ -77,7 +77,7 @@ int	rtgl_use_fog = 1;
 int	rtgl_use_lighting = 1;
 int	rtgl_use_mipmaps = 1;
 
-int	rtgl_has_shader;
+int	rtgl_has_shader; // shader is build on lighting
 extern GLuint	rtgl_shader_program;
 
 //DEBUG
@@ -721,45 +721,47 @@ void	VGL_SetupLevel (const int height, const int fn, const int cn, const int bas
 	VGL_SetFog();
 
 	//set light0
-	{
-		const GLfloat white[4] = {((float)  darknesslevel+10) / 22.0f,
-				((float)  darknesslevel+10) / 22.0f,
-				((float)  darknesslevel+10) / 22.0f,
-				1.0f};
-		rtglLightfv(GL_LIGHT0, GL_AMBIENT, white);
-		rtglLightfv(GL_LIGHT0, GL_DIFFUSE, white);
-	}
-	{
-		const GLfloat white[4] = { 0, 0, 0, 1.0f };
-		rtglLightfv(GL_LIGHT0, GL_SPECULAR, white);
-	}
+	if (rtgl_use_lighting) {
+		{
+			const GLfloat white[4] = {((float)  darknesslevel+10) / 22.0f,
+					((float)  darknesslevel+10) / 22.0f,
+					((float)  darknesslevel+10) / 22.0f,
+					1.0f};
+			rtglLightfv(GL_LIGHT0, GL_AMBIENT, white);
+			rtglLightfv(GL_LIGHT0, GL_DIFFUSE, white);
+		}
+		{
+			const GLfloat white[4] = { 0, 0, 0, 1.0f };
+			rtglLightfv(GL_LIGHT0, GL_SPECULAR, white);
+		}
 
-	assert(!(darknesslevel < 0));
-	assert(darknesslevel <= 7);
+		assert(!(darknesslevel < 0));
+		assert(darknesslevel <= 7);
 
-	rtglEnable(GL_LIGHT0);
-	rtglLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 1.0f);
-	rtglLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, (((float) baseminshade/2.0f + 8.0f) / ((GLfloat) darknesslevel+1.0f)) );
-	rtglLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 50.0f * ((GLfloat) basemaxshade) / ( ((GLfloat) darknesslevel+1.0f) * ((GLfloat) darknesslevel+1.0f) * 1000.0f));	//guess... should be based on maxshade
+		rtglEnable(GL_LIGHT0);
+		rtglLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 1.0f);
+		rtglLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, (((float) baseminshade/2.0f + 8.0f) / ((GLfloat) darknesslevel+1.0f)) );
+		rtglLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 50.0f * ((GLfloat) basemaxshade) / ( ((GLfloat) darknesslevel+1.0f) * ((GLfloat) darknesslevel+1.0f) * 1000.0f));	//guess... should be based on maxshade
 
-	{
-		const GLfloat values[] = { 1.0f, 1.0f, 1.0f, 1.0f};
-		rtglMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, values);
-	}
+		{
+			const GLfloat values[] = { 1.0f, 1.0f, 1.0f, 1.0f};
+			rtglMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, values);
+		}
 
-	{
-		const GLfloat values[] = { 0.8f, 0.8f, 0.8f, 1.0f};
-		rtglMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, values);
-	}
+		{
+			const GLfloat values[] = { 0.8f, 0.8f, 0.8f, 1.0f};
+			rtglMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, values);
+		}
 
-	{
-		const GLfloat values[] = { 0.2f, 0.2f, 0.2f, 1.0f};
-		rtglMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, values);
-	}
+		{
+			const GLfloat values[] = { 0.2f, 0.2f, 0.2f, 1.0f};
+			rtglMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, values);
+		}
 
-	{
-		const GLfloat values[] = { 0.05f, 0.05f, 0.05f, 1.0f};
-		rtglLightModelfv( GL_LIGHT_MODEL_AMBIENT, values);
+		{
+			const GLfloat values[] = { 0.05f, 0.05f, 0.05f, 1.0f};
+			rtglLightModelfv( GL_LIGHT_MODEL_AMBIENT, values);
+		}
 	}
 }
 
@@ -776,8 +778,10 @@ void VGL_SetGas( const int g ) {
 	rtglFogfv(GL_FOG_COLOR, gas);
 
 	//change light color
-	rtglLightfv(GL_LIGHT0, GL_AMBIENT, gas);
-	rtglLightfv(GL_LIGHT0, GL_DIFFUSE, gas);
+	if (rtgl_use_lighting) {
+		rtglLightfv(GL_LIGHT0, GL_AMBIENT, gas);
+		rtglLightfv(GL_LIGHT0, GL_DIFFUSE, gas);
+        }
 
 	rtglEnable(GL_FOG);
 }
@@ -999,6 +1003,8 @@ void VGL_DrawSky(const fixed z) {
 
 
 void _update_near_lights(const unsigned long* lights, const int x, const int y) {
+	if (!rtgl_use_lighting) return;
+
 	int i, j, intensity = 0, nr = 0, pos_x = 0, pos_y = 0;
 
 	const int dist = 2;
@@ -1079,27 +1085,30 @@ void VGL_DrawSpotVis (const byte spotvis[MAPSIZE][MAPSIZE], const word tilemap[M
 	}
 
 	//floor
-	//floor gfx are too bright
-	{
-		GLfloat values[4] = { 1.0f, 1.0f, 1.0f, 1.0f};
-		rtglMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, values);
-	}
+	if (rtgl_use_lighting) {
+		//floor gfx are too bright
+		{
+			GLfloat values[4] = { 1.0f, 1.0f, 1.0f, 1.0f};
+			rtglMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, values);
+		}
 
-	if(rtgl_has_shader) {
-		if (*lightsource)
-			rtglEnable(GL_LIGHT1);
-		rtglUseProgram(rtgl_shader_program);
+		if(rtgl_has_shader) {
+			if (*lightsource) {
+				rtglEnable(GL_LIGHT1);
+			}
+			rtglUseProgram(rtgl_shader_program);
 
-		GLint tex = rtglGetUniformLocation(rtgl_shader_program, "tex0");
-		rtglUniform1i(tex, 0);
+			GLint tex = rtglGetUniformLocation(rtgl_shader_program, "tex0");
+			rtglUniform1i(tex, 0);
 
-		//FIXME: put this somewhere else...
-		rtglValidateProgram(rtgl_shader_program);
-		GLint ok;
-		rtglGetProgramiv(rtgl_shader_program, GL_VALIDATE_STATUS, &ok);
-		if(!ok) {
-			puts("glValidate() == GL_FALSE\n");
-			exit(1);
+			//FIXME: put this somewhere else...
+			rtglValidateProgram(rtgl_shader_program);
+			GLint ok;
+			rtglGetProgramiv(rtgl_shader_program, GL_VALIDATE_STATUS, &ok);
+			if(!ok) {
+				puts("glValidate() == GL_FALSE\n");
+				exit(1);
+			}
 		}
 	}
 
@@ -1164,11 +1173,13 @@ void VGL_DrawSpotVis (const byte spotvis[MAPSIZE][MAPSIZE], const word tilemap[M
 				_generate_cell (&tilemap[i][j], i, j, raw);
 			}
 
-	if(rtgl_has_shader)
-		rtglUseProgram((GLuint) 0);
+	if (rtgl_use_lighting) {
+		if(rtgl_has_shader)
+			rtglUseProgram((GLuint) 0);
 
-	if (*lightsource)
-		rtglDisable(GL_LIGHT1);
+		if (*lightsource)
+			rtglDisable(GL_LIGHT1);
+	}
 }
 
 void VGL_Draw2DTexture(const int x, const int y, const unsigned int width, const unsigned int height, const float texx, const float texy) {

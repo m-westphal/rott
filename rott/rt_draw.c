@@ -1156,7 +1156,7 @@ if (result==false)
       // draw farthest
       //
 #ifdef RT_OPENGL
-if (lightsource) {
+if (lightsource && rtgl_use_lighting) {
 	rtglEnable(GL_LIGHT1);
 	_update_near_lights(lights, sortedvislist[i]->x / 65536, sortedvislist[i]->y / 65536);
 }
@@ -1166,10 +1166,14 @@ switch (sortedvislist[i]->shapesize) {
 #ifdef RT_OPENGL
 	case 6: //fullbright
 		if (!fog) {
-			rtglDisable(GL_LIGHTING);
+			if (rtgl_use_lighting) {
+				rtglDisable(GL_LIGHTING);
+			}
 			VGL_Bind_Texture ( sortedvislist[i]->shapenum, RTGL_TEXTURE_PATCH | RTGL_GENERATE_MIPMAPS | RTGL_FILTER_RGBA | 128);
 			VGL_DrawShapeFan ( sortedvislist[i]->x, sortedvislist[i]->y, sortedvislist[i]->z);
-			rtglEnable(GL_LIGHTING);
+			if (rtgl_use_lighting) {
+				rtglEnable(GL_LIGHTING);
+			}
 			break;
 		}
 	case 0:	//patch_t
@@ -1179,7 +1183,9 @@ switch (sortedvislist[i]->shapesize) {
 	case 5:	//redindex
 		assert(MISCVARS->redindex-1 >= 0 && MISCVARS->redindex-1 <= 16);
 
-		rtglDisable(GL_LIGHTING);
+		if (rtgl_use_lighting) {
+			rtglDisable(GL_LIGHTING);
+		}
 		rtglColor3f(	1.0f,
 				1.0f - (float) (MISCVARS->redindex-1) / 16.0f,
 				1.0f - (float) (MISCVARS->redindex-1) / 16.0f );
@@ -1187,17 +1193,23 @@ switch (sortedvislist[i]->shapesize) {
 		VGL_Bind_Texture ( sortedvislist[i]->shapenum, RTGL_TEXTURE_PATCH | RTGL_GENERATE_MIPMAPS | RTGL_FILTER_RGBA | 128);
 		VGL_DrawShapeFan ( sortedvislist[i]->x, sortedvislist[i]->y, sortedvislist[i]->z);
 		rtglColor3f(1.0f,1.0f,1.0f);
-		rtglEnable(GL_LIGHTING);
+		if (rtgl_use_lighting) {
+			rtglEnable(GL_LIGHTING);
+		}
 		break;
 	case 4: //solid color
-		rtglDisable(GL_LIGHTING);
+		if (rtgl_use_lighting) {
+			rtglDisable(GL_LIGHTING);
+		}
 		rtglColor3f(	(float) rtgl_palette[ sortedvislist[i]->h2 ].r / 255.0f,
 				(float) rtgl_palette[ sortedvislist[i]->h2 ].g / 255.0f,
 				(float) rtgl_palette[ sortedvislist[i]->h2 ].b / 255.0f );
 		VGL_Bind_Texture ( sortedvislist[i]->shapenum, RTGL_TEXTURE_PATCH | RTGL_GENERATE_MIPMAPS | RTGL_FILTER_RGBA | 128);
 		VGL_DrawShapeFan ( sortedvislist[i]->x, sortedvislist[i]->y, sortedvislist[i]->z);
 		rtglColor3f(1.0f,1.0f,1.0f);
-		rtglEnable(GL_LIGHTING);
+		if (rtgl_use_lighting) {
+			rtglEnable(GL_LIGHTING);
+		}
 		break;
 	case 7: //transparent shape transpatch_t fullbright
 		if (!fog) {
@@ -1207,7 +1219,9 @@ switch (sortedvislist[i]->shapesize) {
 		}
 	case 1: //transparent shape transpatch_t
 		/* fading? */
-		rtglDisable(GL_LIGHTING);
+		if (rtgl_use_lighting) {
+			rtglDisable(GL_LIGHTING);
+		}
 		assert (sortedvislist[i]->h2 <= 64);
 		assert (sortedvislist[i]->h2 >= 0);
 		rtglColor4f(1, 1, 1, ((float) sortedvislist[i]->h2) / 64.0f);
@@ -1216,7 +1230,9 @@ switch (sortedvislist[i]->shapesize) {
 		VGL_DrawShapeFan ( sortedvislist[i]->x, sortedvislist[i]->y, sortedvislist[i]->z);
 
 		rtglColor4f(1, 1, 1, 1);
-		rtglEnable(GL_LIGHTING);
+		if (rtgl_use_lighting) {
+			rtglEnable(GL_LIGHTING);
+		}
 		break;
 	case 2: //Masked Wall
 		rtglDisable(GL_CULL_FACE);
@@ -1249,7 +1265,7 @@ switch (sortedvislist[i]->shapesize) {
 }
 }
 #ifdef RT_OPENGL
-if (lightsource)
+if (lightsource && rtgl_use_lighting)
 	rtglDisable(GL_LIGHT1);
 #endif
 }
@@ -2281,8 +2297,10 @@ void WallRefresh (void)
 	gluLookAt(  0, 0, 0, 1, 0, 0, 0, 1, 0);
 
 //	printf("%d, %d, %d, %d, %d\n", darknesslevel, minshade, maxshade, baseminshade, basemaxshade);
-	GLfloat light_position [4] = {0.0f, -((float) locplayerstate->playerheight / 128.0f), 0.0f, 1.0f};
-	rtglLightfv(GL_LIGHT0, GL_POSITION, light_position);
+	if (rtgl_use_lighting) {
+		GLfloat light_position [4] = {0.0f, -((float) locplayerstate->playerheight / 128.0f), 0.0f, 1.0f};
+		rtglLightfv(GL_LIGHT0, GL_POSITION, light_position);
+	}
 
 	//set camera
 	rtglRotatef( (float) -yzangle * 360.0f / 2048.0f , 0, 0, 1);
@@ -2292,7 +2310,9 @@ void WallRefresh (void)
 
 	rtglTranslatef( (float) -viewx / 65536.0f , (float) -levelheight + (float) pheight / 64.0f, (float) -viewy / 65536.0f);
 
-	rtglEnable(GL_LIGHTING);
+	if (rtgl_use_lighting) {
+		rtglEnable(GL_LIGHTING);
+	}
 #endif
 
    Refresh ();
@@ -2735,31 +2755,32 @@ void      ThreeDRefresh (void)
 	rtglTranslatef(-1,1,0);
 	rtglScalef(1.0f / 160.0f, 1.0f / 100.0f, 1);
 
-	rtglDisable(GL_LIGHT0);
-	rtglEnable(GL_LIGHT1);
-	GLfloat light_position [4] = {0,0,0, 1.0f};
-	rtglLightfv(GL_LIGHT1, GL_POSITION, light_position);
-	rtglNormal3f(0, 0, 1.0f);
+        if (rtgl_use_lighting) {
+		rtglDisable(GL_LIGHT0);
+		rtglEnable(GL_LIGHT1);
+		GLfloat light_position [4] = {0,0,0, 1.0f};
+		rtglLightfv(GL_LIGHT1, GL_POSITION, light_position);
+		rtglNormal3f(0, 0, 1.0f);
 
-	//printf("min/max, base min/max: %d/%d, %d/%d\n", minshade, maxshade, baseminshade, basemaxshade);
-	assert(maxshade > 0);
-	assert(minshade < 32);
-	assert(basemaxshade > 0);
-	assert(basemaxshade < 32);
+		assert(maxshade > 0);
+		assert(minshade < 32);
+		assert(basemaxshade > 0);
+		assert(basemaxshade < 32);
 
-	//calc light
-        const float maxquot = (float) basemaxshade / (float) maxshade;
-        const GLfloat val = fmax(0.0f,
-                                 fmin(1.0f,
-                                      0.25f + 2.0f * (maxquot - 1.0f)));
-	//if (val != 0.0f) printf ("%f\n", val);
+		//calc light
+	        const float maxquot = (float) basemaxshade / (float) maxshade;
+	        const GLfloat val = fmax(0.0f,
+	                                 fmin(1.0f,
+	                                      0.25f + 2.0f * (maxquot - 1.0f)));
+		//if (val != 0.0f) printf ("%f\n", val);
 
-	assert(val >= 0);
+		assert(val >= 0);
 
-	{
-		GLfloat spec[4] = { val, val, val, 1.0f};
-		rtglLightfv(GL_LIGHT1, GL_AMBIENT, spec);
-		rtglLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.0f);
+		{
+			GLfloat spec[4] = { val, val, val, 1.0f};
+			rtglLightfv(GL_LIGHT1, GL_AMBIENT, spec);
+			rtglLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.0f);
+		}
 	}
 #endif
 
@@ -2784,10 +2805,14 @@ void      ThreeDRefresh (void)
       UpdateClientControls ();
 
 #ifdef RT_OPENGL
-	rtglDisable(GL_LIGHT1);
-	rtglEnable(GL_LIGHT0);
+	if (rtgl_use_lighting) {
+		rtglDisable(GL_LIGHT1);
+		rtglEnable(GL_LIGHT0);
+	}
 	rtglDisable(GL_FOG);	//shouldn't have effect on HUD AND gasmask
-	rtglDisable(GL_LIGHTING);
+	if (rtgl_use_lighting) {
+		rtglDisable(GL_LIGHTING);
+	}
 #endif
 	   if (player->flags&FL_GASMASK)
 		   DrawScreenSizedSprite(gmasklump);

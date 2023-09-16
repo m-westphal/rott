@@ -157,7 +157,9 @@ void ScaleWeapon (const int xoff, const int y, const int shapenum) {
 	rtglVertex3f(160.0f - 1.3f, -100.0f, 0);
 	rtglVertex3f(160.0f + 1.3f, -100.0f, 0);
 	rtglEnd();
-	rtglEnable(GL_LIGHTING);
+	if (rtgl_use_lighting) {
+		rtglEnable(GL_LIGHTING);
+	}
 	rtglEnable(GL_TEXTURE_2D);
 
 	patch_t* weapon = (patch_t*) W_CacheLumpNum(shapenum, PU_CACHE, Cvt_patch_t,1);
