@@ -1045,12 +1045,12 @@ void _update_near_lights(const unsigned long* lights, const int x, const int y) 
 		}
 	}
 
-	float light_strength = ((float) intensity) / 4096.0f;
+	float light_intensity = ((float) intensity) / (4096.0f);
 
-	light_strength = fmin(1.0, light_strength);
+	light_intensity = fmin(1.0, fmax(0.0, light_intensity));
 
 	rtglEnable(GL_LIGHT1);
-	GLfloat white[4] = { (GLfloat) light_strength, (GLfloat) light_strength, (GLfloat) light_strength,1};
+	GLfloat white[4] = { (GLfloat) light_intensity, (GLfloat) light_intensity, (GLfloat) light_intensity, 1};
 	rtglLightfv(GL_LIGHT1, GL_AMBIENT, white);
 	rtglLightfv(GL_LIGHT1, GL_DIFFUSE, white);
 	rtglLightfv(GL_LIGHT1, GL_SPECULAR, white);
