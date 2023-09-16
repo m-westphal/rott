@@ -1872,7 +1872,7 @@ bottomcheck:
 void   DrawWalls (void)
 {
 #ifdef RT_OPENGL
-VGL_DrawSpotVis(spotvis, tilemap, mapplanes[2], &lightsource, lights);
+   VGL_DrawSpotVis(spotvis, tilemap, mapplanes[2], &lightsource, lights);
 #else
    byte * buf;
    int plane;
@@ -2297,17 +2297,10 @@ void WallRefresh (void)
 
    Refresh ();
    UpdateClientControls();
-#ifdef RT_OPENGL
-   DrawWalls();
-   UpdateClientControls();
-   TransformPushWalls();
-   TransformDoors();
-#else
    TransformPushWalls();
    TransformDoors();
    UpdateClientControls();
    DrawWalls();
-#endif
    UpdateClientControls();
    walltime=GetFastTics()-dtime;
 }
