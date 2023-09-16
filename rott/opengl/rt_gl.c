@@ -38,9 +38,9 @@ rtgl_pal rtgl_palette[256];
 #define RTGL_TEXTURE_LIMIT_MiB	128
 #define RTGL_TEXTURE_OVERHEAD	96*96*4
 /* GLOBALS */
-int	skytop;
-int	skybottom;
-GLint	IFont;
+int		skytop;
+int		skybottom;
+cfont_t*	IFont;
 
 static lumphash	uploaded_textures;
 static unsigned int	max_level_height;
