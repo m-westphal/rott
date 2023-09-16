@@ -38,21 +38,22 @@ rtgl_pal rtgl_palette[256];
 #define RTGL_TEXTURE_LIMIT_MiB	128
 #define RTGL_TEXTURE_OVERHEAD	96*96*4
 /* GLOBALS */
-lumphash	uploaded_textures;
-unsigned int	max_level_height;
-int		floornum;
-int		ceilingnum;
-int		skytop;
-int		skybottom;
-int		current_lumpnum = 0;
-float		fogstart;
-float		fogend;
-boolean		fogonmap = false;
-boolean		fogset = false;
-GLint		IFont;
-float		billboarding_x[3] = {1,0,0};
-float		billboarding_y[3] = {0,1,0};
-float		shape_normal[3] = {1,0,0};
+int	skytop;
+int	skybottom;
+GLint	IFont;
+
+static lumphash	uploaded_textures;
+static unsigned int	max_level_height;
+static int	floornum;
+static int	ceilingnum;
+static int	current_lumpnum = 0;
+static float	fogstart;
+static float	fogend;
+static boolean	fogonmap = false;
+static boolean	fogset = false;
+static float	billboarding_x[3] = {1,0,0};
+static float	billboarding_y[3] = {0,1,0};
+static float	shape_normal[3] = {1,0,0};
 
 //screen resolution
 unsigned int rtgl_screen_width = 640;
