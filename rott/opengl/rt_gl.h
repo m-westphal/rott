@@ -32,6 +32,7 @@ extern rtgl_pal rtgl_palette[256];
 boolean		VGL_Bind_Texture(const int lumpnum, const int texture_type);
 void		VGL_Setup2DMode(void);
 void		VGL_Setup3DMode(void);
+void		VGL_SwitchShader(const int);
 void		PrintGLError(void);
 rtgl_pal*	VGL_GrabScreenshot(void);
 void		VGL_Upload_rotationbuf(const rtgl_pal*);

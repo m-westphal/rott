@@ -1102,25 +1102,6 @@ void VGL_DrawSpotVis (const byte spotvis[MAPSIZE][MAPSIZE], const word tilemap[M
 			GLfloat values[4] = { 1.0f, 1.0f, 1.0f, 1.0f};
 			rtglMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, values);
 		}
-
-		if(rtgl_has_shader && rtgl_use_shader) {
-			if (*lightsource) {
-				rtglEnable(GL_LIGHT1);
-			}
-			rtglUseProgram(rtgl_shader_program);
-
-			GLint tex = rtglGetUniformLocation(rtgl_shader_program, "tex0");
-			rtglUniform1i(tex, 0);
-
-			//FIXME: put this somewhere else...
-			rtglValidateProgram(rtgl_shader_program);
-			GLint ok;
-			rtglGetProgramiv(rtgl_shader_program, GL_VALIDATE_STATUS, &ok);
-			if(!ok) {
-				puts("glValidate() == GL_FALSE\n");
-				exit(1);
-			}
-		}
 	}
 
 	rtglNormal3f(0,1,0);
@@ -1180,7 +1161,7 @@ void VGL_DrawSpotVis (const byte spotvis[MAPSIZE][MAPSIZE], const word tilemap[M
 				}
 	}
 
-	{
+	if (rtgl_use_lighting) {
 		GLfloat values[4] = { 1.0f, 1.0f, 1.0f, 1.0f};
 		rtglMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, values);
 	}
@@ -1195,13 +1176,7 @@ void VGL_DrawSpotVis (const byte spotvis[MAPSIZE][MAPSIZE], const word tilemap[M
 				}
 				_generate_cell (&tilemap[i][j], i, j, raw);
 			}
-
-	if (rtgl_use_lighting) {
-		if(rtgl_has_shader && rtgl_use_shader)
-			rtglUseProgram((GLuint) 0);
-
-		rtglDisable(GL_LIGHT1);
-	}
+	if (rtgl_use_lighting) rtglDisable(GL_LIGHT1);
 }
 
 void VGL_Draw2DTexture(const int x, const int y, const unsigned int width, const unsigned int height, const float texx, const float texy) {
@@ -1212,4 +1187,32 @@ void VGL_Draw2DTexture(const int x, const int y, const unsigned int width, const
 			};
 	rtglInterleavedArrays(GL_T2F_V3F, 0, coords);
 	rtglDrawArrays(GL_QUADS, 0, 4);
+}
+
+void VGL_SwitchShader(const int shader_id) {
+	if (!rtgl_use_lighting || !rtgl_has_shader) return;
+
+	switch (shader_id) {
+		default:
+		case 0:
+			rtglUseProgram(0);
+			break;
+		case 1:
+			if (rtgl_use_shader) {
+				rtglUseProgram(rtgl_shader_program);
+
+				const GLint tex = rtglGetUniformLocation(rtgl_shader_program, "tex0");
+				rtglUniform1i(tex, 0);
+
+				//FIXME: put this somewhere else...
+				rtglValidateProgram(rtgl_shader_program);
+				GLint ok;
+				rtglGetProgramiv(rtgl_shader_program, GL_VALIDATE_STATUS, &ok);
+				if(!ok) {
+					puts("glValidate() == GL_FALSE\n");
+					exit(1);
+				}
+			}
+			break;
+	}
 }

@@ -2326,6 +2326,8 @@ void WallRefresh (void)
 	if (rtgl_use_lighting) {
 		rtglEnable(GL_LIGHTING);
 	}
+
+	VGL_SwitchShader(1);
 #endif
 
    Refresh ();
@@ -2336,6 +2338,10 @@ void WallRefresh (void)
    DrawWalls();
    UpdateClientControls();
    walltime=GetFastTics()-dtime;
+
+#ifdef RT_OPENGL
+	VGL_SwitchShader(0);
+#endif
 }
 
 
