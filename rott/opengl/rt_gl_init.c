@@ -40,6 +40,8 @@ static int _opengl_version(int a, int b) {
 	char *str;
 
 	char* start = (char*) rtglGetString(GL_VERSION);
+	if (start == NULL)
+		return 0;
 
 	str = start;
 

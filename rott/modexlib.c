@@ -159,6 +159,8 @@ void GraphicsMode ( void )
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
 	set_rt_gl_has_multisample();
@@ -215,8 +217,15 @@ void GraphicsMode ( void )
 
 	SDL_GL_CreateContext(screen);
 
-	if( ! rtgl_SupportedCard() )
+	if (SDL_GL_LoadLibrary(NULL) != 0) {
+		puts(SDL_GetError());
+		Error("Failed to load GL library\n");
+	}
+
+	if( ! rtgl_SupportedCard() ) {
+		puts(SDL_GetError());
 		Error ("RT_GL: failed to initialize\n");
+	}
 
         if(rtgl_has_multisample != 0)
                 rtglEnable(GL_MULTISAMPLE_ARB);
