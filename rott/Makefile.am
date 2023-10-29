@@ -1,5 +1,4 @@
 AUTOMAKE_OPTIONS = subdir-objects
-SUBDIRS = audiolib
 
 rott@SUFFIX@_CFLAGS = @SDL_CFLAGS@ @SDL_mixer_CFLAGS@
 if BUILD_RT_OPENGL
@@ -17,6 +16,7 @@ rott@SUFFIX@_SOURCES = \
 	cin_util.c \
 	dosutil.c \
 	dukemusc.c \
+	fx_mixer.c \
 	isr.c \
 	m_misc2.c \
 	modexlib.c \
@@ -56,7 +56,7 @@ rott@SUFFIX@_SOURCES = \
 	w_wad.c \
 	z_zone.c
 
-rott@SUFFIX@_LDADD = audiolib/libaudiolib.a @SDL_LIBS@ @SDL_mixer_LIBS@
+rott@SUFFIX@_LDADD = @SDL_LIBS@ @SDL_mixer_LIBS@
 
 if BUILD_RT_OPENGL
 rott@SUFFIX@_SOURCES += opengl/engine.c opengl/rt_build.c opengl/rt_gl.c opengl/rt_gl_hash.c opengl/rt_gl_init.c opengl/rt_gl_sdl_video_init.c opengl/rt_gl_shader.c opengl/rt_gl_texture.c opengl/rt_scale.c
